@@ -1,9 +1,8 @@
-import { createFileRoute, redirect, useNavigate } from '@tanstack/react-router'
+import { createFileRoute, redirect } from '@tanstack/react-router'
 import { useEffect, useState } from 'react'
 import { BottomNav } from '#/components/bottom-nav'
 import { FastDialog } from '#/components/fast-dialog'
-import { currentUserId, type Fast, fasts, isLoggedIn, pb } from '#/lib/pb'
-import { disablePush, enablePush, getPushSubscription, pushSupported } from '#/lib/push'
+import { currentUser, currentUserId, type Fast, fasts, isLoggedIn } from '#/lib/pb'
 import { formatDate, formatDuration } from '#/lib/time'
 import { type Zone, zoneAt } from '#/lib/zones'
 
@@ -16,16 +15,17 @@ export const Route = createFileRoute('/')({
   component: Home,
 })
 
-function useActiveFast() {
-  const [fast, setFast] = useState<Fast | null>(null)
+/** The running fast, or the most recently finished one. */
+function useLatestFast() {
+  const [latest, setLatest] = useState<Fast | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     const load = () =>
       fasts()
-        .getFirstListItem('endedAt = ""', { sort: '-startedAt', requestKey: null })
-        .then(setFast)
-        .catch(() => setFast(null))
+        .getList(1, 1, { sort: '-startedAt', requestKey: null })
+        .then((r) => setLatest(r.items[0] ?? null))
+        .catch(() => setLatest(null))
         .finally(() => setLoading(false))
 
     load()
@@ -36,7 +36,9 @@ function useActiveFast() {
     }
   }, [])
 
-  return { fast, loading }
+  const active = latest && !latest.endedAt ? latest : null
+  const lastEnded = latest?.endedAt ? latest : null
+  return { fast: active, lastEnded, loading }
 }
 
 function useNow(enabled: boolean) {
@@ -50,9 +52,9 @@ function useNow(enabled: boolean) {
 }
 
 function Home() {
-  const navigate = useNavigate()
-  const { fast, loading } = useActiveFast()
-  const now = useNow(Boolean(fast))
+  const { fast, lastEnded, loading } = useLatestFast()
+  const now = useNow(Boolean(fast || lastEnded))
+  const eatingWindowHours = currentUser()?.eatingWindowHours ?? 0
   const [target, setTarget] = useState(16)
   const [custom, setCustom] = useState(false)
   const [dialog, setDialog] = useState<'edit-active' | 'finish' | null>(null)
@@ -63,11 +65,6 @@ function Home() {
       startedAt: new Date().toISOString(),
       targetHours: target,
     })
-  }
-
-  function logout() {
-    pb.authStore.clear()
-    navigate({ to: '/login' })
   }
 
   if (loading) return null
@@ -81,13 +78,6 @@ function Home() {
     <main className="mx-auto flex min-h-dvh max-w-md flex-col items-center px-6 pt-[max(1.5rem,env(safe-area-inset-top))] pb-[calc(6rem+env(safe-area-inset-bottom))]">
       <header className="flex w-full items-center justify-between">
         <h1 className="font-display text-3xl font-extrabold tracking-tight">Deju</h1>
-        <button
-          type="button"
-          onClick={logout}
-          className="text-sm font-semibold text-muted-foreground"
-        >
-          Salir
-        </button>
       </header>
 
       <section className="flex w-full flex-1 flex-col items-center justify-center gap-10 py-8">
@@ -109,9 +99,7 @@ function Home() {
           ) : (
             <>
               <span className="font-display text-6xl font-extrabold tracking-tight">{target}h</span>
-              <span className="text-sm font-semibold text-muted-foreground">
-                Listo para empezar
-              </span>
+              <EatingStatus lastEnded={lastEnded} eatingWindowHours={eatingWindowHours} now={now} />
             </>
           )}
         </ProgressRing>
@@ -190,7 +178,6 @@ function Home() {
         )}
       </section>
 
-      <PushToggle />
       <BottomNav />
 
       {fast && dialog && (
@@ -202,6 +189,34 @@ function Home() {
         />
       )}
     </main>
+  )
+}
+
+function EatingStatus({
+  lastEnded,
+  eatingWindowHours,
+  now,
+}: {
+  lastEnded: Fast | null
+  eatingWindowHours: number
+  now: number
+}) {
+  if (!lastEnded) {
+    return <span className="text-sm font-semibold text-muted-foreground">Listo para empezar</span>
+  }
+  const eating = now - new Date(lastEnded.endedAt).getTime()
+  const untilNext = eatingWindowHours * 3_600_000 - eating
+  return (
+    <>
+      <span className="text-sm font-semibold text-muted-foreground tabular-nums">
+        Comiendo · {formatDuration(eating)}
+      </span>
+      {eatingWindowHours > 0 && (
+        <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground tabular-nums">
+          {untilNext > 0 ? `Siguiente ayuno en ${formatDuration(untilNext)}` : '¡Hora de ayunar!'}
+        </span>
+      )}
+    </>
   )
 }
 
@@ -251,45 +266,6 @@ function ProgressRing({
         />
       </svg>
       <div className="relative flex flex-col items-center gap-1">{children}</div>
-    </div>
-  )
-}
-
-function PushToggle() {
-  const [enabled, setEnabled] = useState<boolean | null>(null)
-  const [error, setError] = useState<string | null>(null)
-
-  useEffect(() => {
-    if (!pushSupported()) return
-    getPushSubscription().then((s) => setEnabled(Boolean(s)))
-  }, [])
-
-  if (!pushSupported()) {
-    return (
-      <p className="text-center text-xs text-muted-foreground">
-        Para recibir avisos, instala la app en tu pantalla de inicio.
-      </p>
-    )
-  }
-  if (enabled === null) return null
-
-  async function toggle() {
-    setError(null)
-    try {
-      if (enabled) await disablePush()
-      else await enablePush()
-      setEnabled(!enabled)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Error')
-    }
-  }
-
-  return (
-    <div className="flex flex-col items-center gap-1">
-      <button type="button" onClick={toggle} className="text-sm underline">
-        {enabled ? 'Desactivar notificaciones' : 'Activar notificaciones'}
-      </button>
-      {error && <p className="text-xs text-destructive">{error}</p>}
     </div>
   )
 }

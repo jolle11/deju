@@ -6,6 +6,8 @@ import { reachedMilestones } from './milestones.ts'
 type Fast = { id: string; user: string; startedAt: string; targetHours: number }
 type PushSub = { id: string; endpoint: string; p256dh: string; auth: string }
 type LogEntry = { kind: string }
+type User = { id: string; eatingWindowHours: number }
+type EndedFast = { id: string; endedAt: string }
 
 webpush.setVapidDetails(env.vapidSubject, env.vapidPublicKey, env.vapidPrivateKey)
 
@@ -84,6 +86,42 @@ async function tick() {
         })
         console.log(`sent ${m.kind} for fast ${fast.id}`)
       }
+    }
+  }
+
+  await remindNextFast(now)
+}
+
+/** Nudges users with an eating window to start their next fast. */
+async function remindNextFast(now: Date) {
+  const users = await pb
+    .collection('users')
+    .getFullList<User>({ filter: 'eatingWindowHours > 0', fields: 'id,eatingWindowHours' })
+
+  for (const user of users) {
+    const last = await pb
+      .collection('fasts')
+      .getList<EndedFast>(1, 1, {
+        filter: pb.filter('user = {:id}', { id: user.id }),
+        sort: '-startedAt',
+        fields: 'id,endedAt',
+      })
+      .then((r) => r.items[0])
+    // No history, or a fast is already running.
+    if (!last?.endedAt) continue
+
+    const dueAt = new Date(last.endedAt).getTime() + user.eatingWindowHours * 3_600_000
+    // Skip if due long ago (e.g. worker was down), to avoid stale nudges.
+    if (now.getTime() < dueAt || now.getTime() - dueAt > 6 * 3_600_000) continue
+
+    if (await claim(last.id, 'next-fast')) {
+      await sendToUser(user.id, {
+        title: '⏱️ Hora de ayunar',
+        body: `Tu ventana de comida de ${user.eatingWindowHours}h ha terminado. ¿Empezamos?`,
+        tag: `next-${last.id}`,
+        url: '/',
+      })
+      console.log(`sent next-fast reminder for user ${user.id}`)
     }
   }
 }

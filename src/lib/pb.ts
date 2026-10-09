@@ -8,9 +8,29 @@ export type Fast = RecordModel & {
   endedAt: string
   targetHours: number
   note: string
+  /** 0 = not rated, 1..5 */
+  rating: number
+}
+
+export type Weight = RecordModel & {
+  user: string
+  kg: number
+  measuredAt: string
+}
+
+export type User = RecordModel & {
+  email: string
+  /** 0 = no next-fast reminder */
+  eatingWindowHours: number
 }
 
 export const fasts = () => pb.collection<Fast>('fasts')
+export const weights = () => pb.collection<Weight>('weights')
+export const users = () => pb.collection<User>('users')
+
+export function currentUser() {
+  return pb.authStore.record as User | null
+}
 
 export function isLoggedIn() {
   return pb.authStore.isValid

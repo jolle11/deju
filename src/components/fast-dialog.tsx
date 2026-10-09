@@ -2,9 +2,14 @@ import { useEffect, useRef, useState } from 'react'
 import type { Fast } from '#/lib/pb'
 import { fromLocalInput, toLocalInput } from '#/lib/time'
 
-export type FastPatch = Partial<Pick<Fast, 'startedAt' | 'endedAt' | 'targetHours' | 'note'>>
+export type FastPatch = Partial<
+  Pick<Fast, 'startedAt' | 'endedAt' | 'targetHours' | 'note' | 'rating'>
+>
 
 type Mode = 'edit-active' | 'finish' | 'edit-past'
+
+export const RATINGS = ['😫', '😕', '😐', '🙂', '😄']
+const RATING_LABELS = ['Fatal', 'Mal', 'Normal', 'Bien', 'Genial']
 
 const TITLES: Record<Mode, string> = {
   'edit-active': 'Editar ayuno',
@@ -36,6 +41,7 @@ export function FastDialog({
   const [endedAt, setEndedAt] = useState(() => toLocalInput(fast.endedAt || Date.now()))
   const [targetHours, setTargetHours] = useState(fast.targetHours)
   const [note, setNote] = useState(fast.note ?? '')
+  const [rating, setRating] = useState(fast.rating ?? 0)
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
 
@@ -63,7 +69,10 @@ export function FastDialog({
     if (showStart) patch.startedAt = fromLocalInput(startedAt)
     if (showEnd) patch.endedAt = fromLocalInput(endedAt)
     if (showTarget) patch.targetHours = targetHours
-    if (showNote) patch.note = note.trim()
+    if (showNote) {
+      patch.note = note.trim()
+      patch.rating = rating
+    }
 
     setBusy(true)
     setError(null)
@@ -145,6 +154,8 @@ export function FastDialog({
           </label>
         )}
 
+        {showNote && <RatingPicker value={rating} onChange={setRating} />}
+
         {showNote && (
           <label className="flex flex-col gap-1.5 text-sm font-semibold">
             Nota
@@ -152,7 +163,7 @@ export function FastDialog({
               rows={3}
               maxLength={500}
               value={note}
-              placeholder="¿Cómo te has sentido?"
+              placeholder="Algo que quieras recordar…"
               onChange={(e) => setNote(e.target.value)}
               className={`${field} resize-none font-normal`}
             />
@@ -192,5 +203,35 @@ export function FastDialog({
         )}
       </form>
     </dialog>
+  )
+}
+
+function RatingPicker({ value, onChange }: { value: number; onChange: (v: number) => void }) {
+  return (
+    <fieldset className="flex flex-col gap-1.5">
+      <legend className="mb-1.5 text-sm font-semibold">¿Cómo te has sentido?</legend>
+      <div className="flex justify-between gap-2">
+        {RATINGS.map((emoji, i) => {
+          const v = i + 1
+          const selected = v === value
+          return (
+            <button
+              key={emoji}
+              type="button"
+              aria-pressed={selected}
+              aria-label={RATING_LABELS[i]}
+              onClick={() => onChange(selected ? 0 : v)}
+              className={`grid size-12 place-items-center rounded-full border text-2xl transition-transform ${
+                selected
+                  ? 'scale-110 border-[var(--lagoon)] bg-[var(--lagoon)]/15'
+                  : 'border-input opacity-60'
+              }`}
+            >
+              {emoji}
+            </button>
+          )
+        })}
+      </div>
+    </fieldset>
   )
 }

@@ -1,9 +1,10 @@
 import { Link } from '@tanstack/react-router'
-import { History, Timer } from 'lucide-react'
+import { History, Timer, User } from 'lucide-react'
 
 const TABS = [
   { to: '/', label: 'Ayuno', Icon: Timer },
   { to: '/history', label: 'Historial', Icon: History },
+  { to: '/profile', label: 'Perfil', Icon: User },
 ] as const
 
 /** Thumb-reachable tab bar, padded for the iOS home indicator. */

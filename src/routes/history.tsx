@@ -1,7 +1,7 @@
 import { createFileRoute, redirect } from '@tanstack/react-router'
 import { useEffect, useState } from 'react'
 import { BottomNav } from '#/components/bottom-nav'
-import { FastDialog } from '#/components/fast-dialog'
+import { FastDialog, RATINGS } from '#/components/fast-dialog'
 import { MonthCalendar, WeeklyChart } from '#/components/stats'
 import { type Fast, fasts, isLoggedIn } from '#/lib/pb'
 import { computeStats, durationMs, isCompleted } from '#/lib/stats'
@@ -89,6 +89,7 @@ function History() {
                     <span className="flex min-w-0 flex-1 flex-col">
                       <span className="text-sm font-semibold capitalize text-muted-foreground">
                         {formatDate(f.startedAt)}
+                        {f.rating > 0 && ` · ${RATINGS[f.rating - 1]}`}
                       </span>
                       {f.note && <span className="truncate text-sm">{f.note}</span>}
                     </span>
