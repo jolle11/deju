@@ -85,7 +85,7 @@ function Home() {
     <AppShell>
       <div className="flex flex-1 flex-col gap-10 lg:grid lg:items-center lg:grid-cols-[minmax(0,1fr)_22rem] lg:items-start lg:gap-12">
         {/* Timer column */}
-        <section className="flex flex-1 flex-col items-center gap-6 lg:min-h-[calc(100dvh-5rem)] lg:justify-center lg:gap-8">
+        <section className="flex flex-1 flex-col items-center gap-6 lg:self-stretch lg:justify-center lg:gap-8">
           <div className="flex flex-1 items-center lg:flex-none">
             <ProgressRing progress={progress} color={fast ? zone.color : undefined}>
               {fast ? (
