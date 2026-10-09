@@ -4,6 +4,8 @@ const es = {
   'nav.fast': 'Ayuno',
   'nav.history': 'Historial',
   'nav.settings': 'Ajustes',
+  'nav.collapse': 'Contraer menú',
+  'nav.expand': 'Expandir menú',
 
   'common.cancel': 'Cancelar',
   'common.save': 'Guardar',
@@ -179,6 +181,8 @@ const ca: Messages = {
   'nav.fast': 'Dejuni',
   'nav.history': 'Historial',
   'nav.settings': 'Ajustos',
+  'nav.collapse': 'Contreure el menú',
+  'nav.expand': 'Expandir el menú',
 
   'common.cancel': 'Cancel·lar',
   'common.save': 'Desar',
@@ -352,6 +356,8 @@ const en: Messages = {
   'nav.fast': 'Fast',
   'nav.history': 'History',
   'nav.settings': 'Settings',
+  'nav.collapse': 'Collapse menu',
+  'nav.expand': 'Expand menu',
 
   'common.cancel': 'Cancel',
   'common.save': 'Save',
