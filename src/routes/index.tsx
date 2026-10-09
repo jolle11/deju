@@ -1,6 +1,6 @@
 import { createFileRoute, Link, redirect } from '@tanstack/react-router'
 import { ChevronDown } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { AppShell } from '#/components/app-shell'
 import { FastDialog } from '#/components/fast-dialog'
 import { Delayed, Skeleton } from '#/components/skeleton'
@@ -46,8 +46,8 @@ function readRecentCache(): RecentFasts | null {
 function useRecentFasts() {
   const [state, setState] = useState<RecentFasts | null>(readRecentCache)
 
-  useEffect(() => {
-    const load = () =>
+  const load = useCallback(
+    () =>
       Promise.all([
         fasts()
           .getList(1, 1, { filter: 'endedAt = ""', sort: '-startedAt', requestKey: null })
@@ -60,14 +60,24 @@ function useRecentFasts() {
           setState({ active, past })
           localStorage.setItem(recentCacheKey(), JSON.stringify({ active, past }))
         })
-        .catch(() => setState((s) => s ?? { active: null, past: [] }))
+        .catch(() => setState((s) => s ?? { active: null, past: [] })),
+    [],
+  )
 
+  useEffect(() => {
     load()
     // Keep every open device in sync.
     return onCollectionChange('fasts', load)
-  }, [])
+  }, [load])
+
+  /** Paint the new running fast right away; realtime/refetch confirms it. */
+  function setActive(active: Fast | null) {
+    setState((s) => ({ active, past: s?.past ?? [] }))
+  }
 
   return {
+    setActive,
+    reload: load,
     fast: state?.active ?? null,
     lastEnded: state?.past[0] ?? null,
     past: state?.past ?? [],
@@ -88,16 +98,25 @@ function useNow(enabled: boolean) {
 function Home() {
   const { t, locale } = useI18n()
   const { targetHours, eatingWindowHours } = usePrefs()
-  const { fast, lastEnded, past, loading } = useRecentFasts()
+  const { fast, lastEnded, past, loading, setActive, reload } = useRecentFasts()
   const now = useNow(Boolean(fast || lastEnded))
   const [dialog, setDialog] = useState<'edit-active' | 'finish' | null>(null)
 
   async function start() {
-    await fasts().create({
+    const draft = {
       user: currentUserId(),
       startedAt: new Date().toISOString(),
+      endedAt: '',
       targetHours,
-    })
+      note: '',
+      rating: 0,
+    }
+    setActive({ ...draft, id: '', collectionId: '', collectionName: 'fasts' } as Fast)
+    try {
+      setActive(await fasts().create<Fast>(draft))
+    } catch {
+      reload()
+    }
   }
 
   if (loading) return <HomeSkeleton />
@@ -176,7 +195,11 @@ function Home() {
           fast={fast}
           mode={dialog}
           onClose={() => setDialog(null)}
-          onSave={(patch) => fasts().update(fast.id, patch)}
+          onSave={async (patch) => {
+            await fasts().update(fast.id, patch)
+            if (patch.endedAt) setActive(null)
+            reload()
+          }}
         />
       )}
     </AppShell>
