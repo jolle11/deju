@@ -1,6 +1,6 @@
 import { createFileRoute, Link, redirect } from '@tanstack/react-router'
 import { ChevronDown } from 'lucide-react'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { AppShell } from '#/components/app-shell'
 import { FastDialog } from '#/components/fast-dialog'
 import { Delayed, Skeleton } from '#/components/skeleton'
@@ -16,6 +16,7 @@ import {
 import { type Translate, useI18n, usePrefs } from '#/lib/preferences'
 import { durationMs, isCompleted } from '#/lib/stats'
 import { capitalize, formatDate, formatDuration } from '#/lib/time'
+import { cn } from '#/lib/utils'
 import { type Zone, zoneAt } from '#/lib/zones'
 
 export const Route = createFileRoute('/')({
@@ -102,6 +103,9 @@ function Home() {
   const now = useNow(Boolean(fast || lastEnded))
   const [dialog, setDialog] = useState<'edit-active' | 'finish' | null>(null)
 
+  // The fast being created, so edits made before the server answers can wait for its id.
+  const pendingCreate = useRef<Promise<Fast> | null>(null)
+
   async function start() {
     const draft = {
       user: currentUserId(),
@@ -112,10 +116,14 @@ function Home() {
       rating: 0,
     }
     setActive({ ...draft, id: '', collectionId: '', collectionName: 'fasts' } as Fast)
+    const created = fasts().create<Fast>(draft)
+    pendingCreate.current = created
     try {
-      setActive(await fasts().create<Fast>(draft))
+      setActive(await created)
     } catch {
       reload()
+    } finally {
+      if (pendingCreate.current === created) pendingCreate.current = null
     }
   }
 
@@ -129,7 +137,11 @@ function Home() {
   return (
     <AppShell>
       <div className="flex flex-1 flex-col items-center justify-center gap-6 lg:gap-8">
-        <ProgressRing progress={progress} color={fast ? zone.color : undefined}>
+        <ProgressRing
+          progress={progress}
+          color={fast ? zone.color : undefined}
+          syncing={fast?.id === ''}
+        >
           {fast ? (
             <>
               <span className="text-xs font-bold uppercase tracking-[0.2em] text-muted-foreground">
@@ -196,7 +208,9 @@ function Home() {
           mode={dialog}
           onClose={() => setDialog(null)}
           onSave={async (patch) => {
-            await fasts().update(fast.id, patch)
+            const id = fast.id || (await pendingCreate.current)?.id
+            if (!id) throw new Error(t('common.saveError'))
+            await fasts().update(id, patch)
             if (patch.endedAt) setActive(null)
             reload()
           }}
@@ -345,10 +359,13 @@ function ZoneCard({
 function ProgressRing({
   progress,
   color,
+  syncing = false,
   children,
 }: {
   progress: number
   color?: string
+  /** Not yet saved on the server: pulse the track as a quiet hint. */
+  syncing?: boolean
   children: React.ReactNode
 }) {
   const r = 120
@@ -362,7 +379,7 @@ function ProgressRing({
           r={r}
           fill="none"
           strokeWidth="18"
-          className="stroke-foreground/10"
+          className={cn('stroke-foreground/10', syncing && 'animate-pulse')}
         />
         <circle
           cx="140"
