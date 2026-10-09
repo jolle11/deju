@@ -1,0 +1,128 @@
+import { createFileRoute, Link, redirect } from '@tanstack/react-router'
+import { useEffect, useState } from 'react'
+import { FastDialog } from '#/components/fast-dialog'
+import { type Fast, fasts, isLoggedIn } from '#/lib/pb'
+import { formatDate, formatHours } from '#/lib/time'
+
+export const Route = createFileRoute('/history')({
+  beforeLoad: () => {
+    if (!isLoggedIn()) throw redirect({ to: '/login' })
+  },
+  component: History,
+})
+
+function usePastFasts() {
+  const [items, setItems] = useState<Fast[] | null>(null)
+
+  useEffect(() => {
+    const load = () =>
+      fasts()
+        .getFullList({ filter: 'endedAt != ""', sort: '-startedAt', requestKey: null })
+        .then(setItems)
+        .catch(() => setItems([]))
+
+    load()
+    const unsubscribe = fasts().subscribe('*', load)
+    return () => {
+      unsubscribe.then((fn) => fn())
+    }
+  }, [])
+
+  return items
+}
+
+function durationMs(f: Fast) {
+  return new Date(f.endedAt).getTime() - new Date(f.startedAt).getTime()
+}
+
+function History() {
+  const items = usePastFasts()
+  const [editing, setEditing] = useState<Fast | null>(null)
+
+  if (!items) return null
+
+  const completed = items.filter((f) => durationMs(f) >= f.targetHours * 3_600_000).length
+  const longest = items.reduce((max, f) => Math.max(max, durationMs(f)), 0)
+
+  return (
+    <main className="mx-auto flex min-h-dvh max-w-md flex-col gap-6 p-6">
+      <header className="flex w-full items-center justify-between">
+        <h1 className="font-display text-3xl font-extrabold tracking-tight">Historial</h1>
+        <Link to="/" className="text-sm font-semibold text-foreground no-underline">
+          ← Volver
+        </Link>
+      </header>
+
+      {items.length === 0 ? (
+        <p className="py-16 text-center text-muted-foreground">
+          Aún no has terminado ningún ayuno.
+        </p>
+      ) : (
+        <>
+          <dl className="grid grid-cols-3 gap-2 text-center">
+            <Stat label="Ayunos" value={String(items.length)} />
+            <Stat label="Cumplidos" value={String(completed)} />
+            <Stat label="Más largo" value={formatHours(longest).replace(/ \d+m$/, '')} />
+          </dl>
+
+          <ul className="flex flex-col gap-2">
+            {items.map((f) => {
+              const ms = durationMs(f)
+              const done = ms >= f.targetHours * 3_600_000
+              return (
+                <li key={f.id}>
+                  <button
+                    type="button"
+                    onClick={() => setEditing(f)}
+                    className="flex w-full items-center gap-4 rounded-2xl border border-input px-4 py-3 text-left"
+                  >
+                    <span
+                      className={`size-3 shrink-0 rounded-full ${done ? 'bg-[var(--lagoon)]' : 'bg-muted'}`}
+                    >
+                      <span className="sr-only">
+                        {done ? 'Objetivo cumplido' : 'Objetivo no cumplido'}
+                      </span>
+                    </span>
+                    <span className="flex min-w-0 flex-1 flex-col">
+                      <span className="text-sm font-semibold capitalize text-muted-foreground">
+                        {formatDate(f.startedAt)}
+                      </span>
+                      {f.note && <span className="truncate text-sm">{f.note}</span>}
+                    </span>
+                    <span className="flex flex-col items-end">
+                      <span className="font-display text-xl font-extrabold tabular-nums">
+                        {formatHours(ms)}
+                      </span>
+                      <span className="text-xs font-semibold text-muted-foreground">
+                        de {f.targetHours}h
+                      </span>
+                    </span>
+                  </button>
+                </li>
+              )
+            })}
+          </ul>
+        </>
+      )}
+
+      {editing && (
+        <FastDialog
+          fast={editing}
+          mode="edit-past"
+          onClose={() => setEditing(null)}
+          onSave={(patch) => fasts().update(editing.id, patch)}
+          onDelete={() => fasts().delete(editing.id)}
+        />
+      )}
+    </main>
+  )
+}
+
+function Stat({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex flex-col-reverse rounded-2xl border border-input px-2 py-3">
+      <dt className="text-xs font-bold uppercase tracking-wider text-muted-foreground">{label}</dt>
+      <dd className="font-display text-2xl font-extrabold tabular-nums">{value}</dd>
+    </div>
+  )
+}

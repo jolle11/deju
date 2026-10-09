@@ -1,7 +1,9 @@
+import { createFileRoute, Link, redirect, useNavigate } from '@tanstack/react-router'
 import { useEffect, useState } from 'react'
-import { createFileRoute, redirect, useNavigate } from '@tanstack/react-router'
-import { type Fast, currentUserId, fasts, isLoggedIn, pb } from '#/lib/pb'
+import { FastDialog } from '#/components/fast-dialog'
+import { currentUserId, type Fast, fasts, isLoggedIn, pb } from '#/lib/pb'
 import { disablePush, enablePush, getPushSubscription, pushSupported } from '#/lib/push'
+import { formatDate, formatDuration } from '#/lib/time'
 
 const TARGET_OPTIONS = [13, 16, 18, 20, 24, 36]
 
@@ -45,19 +47,13 @@ function useNow(enabled: boolean) {
   return now
 }
 
-function formatDuration(ms: number) {
-  const total = Math.max(0, Math.floor(ms / 1000))
-  const h = Math.floor(total / 3600)
-  const m = Math.floor((total % 3600) / 60)
-  const s = total % 60
-  return [h, m, s].map((n) => String(n).padStart(2, '0')).join(':')
-}
-
 function Home() {
   const navigate = useNavigate()
   const { fast, loading } = useActiveFast()
   const now = useNow(Boolean(fast))
   const [target, setTarget] = useState(16)
+  const [custom, setCustom] = useState(false)
+  const [dialog, setDialog] = useState<'edit-active' | 'finish' | null>(null)
 
   async function start() {
     await fasts().create({
@@ -65,11 +61,6 @@ function Home() {
       startedAt: new Date().toISOString(),
       targetHours: target,
     })
-  }
-
-  async function stop() {
-    if (!fast) return
-    await fasts().update(fast.id, { endedAt: new Date().toISOString() })
   }
 
   function logout() {
@@ -84,92 +75,145 @@ function Home() {
   const progress = fast ? Math.min(1, elapsed / goalMs) : 0
 
   return (
-    <main className="mx-auto flex min-h-dvh max-w-md flex-col items-center gap-8 p-6">
+    <main className="mx-auto flex min-h-dvh max-w-md flex-col items-center p-6">
       <header className="flex w-full items-center justify-between">
-        <h1 className="text-2xl font-bold">Deju</h1>
-        <button type="button" onClick={logout} className="text-sm text-muted-foreground">
-          Salir
-        </button>
+        <h1 className="font-display text-3xl font-extrabold tracking-tight">Deju</h1>
+        <nav className="flex items-center gap-4 text-sm font-semibold">
+          <Link to="/history" className="text-foreground no-underline">
+            Historial
+          </Link>
+          <button type="button" onClick={logout} className="text-muted-foreground">
+            Salir
+          </button>
+        </nav>
       </header>
 
-      <ProgressRing progress={progress}>
-        {fast ? (
-          <>
-            <span className="text-sm text-muted-foreground">
-              {progress >= 1 ? '¡Objetivo cumplido!' : 'Ayunando'}
-            </span>
-            <span className="font-mono text-4xl font-bold tabular-nums">
-              {formatDuration(elapsed)}
-            </span>
-            <span className="text-sm text-muted-foreground">
-              {progress >= 1
-                ? `+${formatDuration(elapsed - goalMs)}`
-                : `Quedan ${formatDuration(goalMs - elapsed)}`}
-            </span>
-          </>
-        ) : (
-          <span className="text-lg text-muted-foreground">Sin ayuno activo</span>
-        )}
-      </ProgressRing>
+      <section className="flex w-full flex-1 flex-col items-center justify-center gap-10 py-8">
+        <ProgressRing progress={progress}>
+          {fast ? (
+            <>
+              <span className="text-xs font-bold uppercase tracking-[0.2em] text-muted-foreground">
+                {progress >= 1 ? '¡Objetivo cumplido!' : `Ayuno de ${fast.targetHours}h`}
+              </span>
+              <span className="font-display text-5xl font-extrabold tracking-tight tabular-nums">
+                {formatDuration(elapsed)}
+              </span>
+              <span className="text-sm font-semibold text-muted-foreground tabular-nums">
+                {progress >= 1
+                  ? `+${formatDuration(elapsed - goalMs)}`
+                  : `Quedan ${formatDuration(goalMs - elapsed)}`}
+              </span>
+            </>
+          ) : (
+            <>
+              <span className="font-display text-6xl font-extrabold tracking-tight">{target}h</span>
+              <span className="text-sm font-semibold text-muted-foreground">
+                Listo para empezar
+              </span>
+            </>
+          )}
+        </ProgressRing>
 
-      {fast ? (
-        <button
-          type="button"
-          onClick={stop}
-          className="w-full rounded-full bg-destructive px-6 py-3 font-semibold text-white"
-        >
-          Terminar ayuno
-        </button>
-      ) : (
-        <div className="flex w-full flex-col gap-4">
-          <div className="flex flex-wrap justify-center gap-2">
-            {TARGET_OPTIONS.map((h) => (
+        {fast ? (
+          <div className="flex w-full flex-col items-center gap-4">
+            <button
+              type="button"
+              onClick={() => setDialog('edit-active')}
+              className="text-sm font-semibold text-muted-foreground"
+            >
+              Inicio: {formatDate(fast.startedAt)} · <span className="underline">Editar</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setDialog('finish')}
+              className="w-full rounded-full bg-destructive px-6 py-4 text-lg font-extrabold text-white"
+            >
+              Terminar ayuno
+            </button>
+          </div>
+        ) : (
+          <div className="flex w-full flex-col gap-4">
+            <div className="flex flex-wrap justify-center gap-2">
+              {TARGET_OPTIONS.map((h) => (
+                <button
+                  key={h}
+                  type="button"
+                  onClick={() => {
+                    setTarget(h)
+                    setCustom(false)
+                  }}
+                  className={`rounded-full border px-4 py-1.5 text-sm font-bold ${
+                    h === target && !custom
+                      ? 'border-primary bg-primary text-primary-foreground'
+                      : 'border-input'
+                  }`}
+                >
+                  {h}h
+                </button>
+              ))}
               <button
-                key={h}
                 type="button"
-                onClick={() => setTarget(h)}
-                className={`rounded-full border px-4 py-1.5 text-sm ${
-                  h === target ? 'border-primary bg-primary text-primary-foreground' : 'border-input'
+                onClick={() => setCustom(true)}
+                className={`rounded-full border px-4 py-1.5 text-sm font-bold ${
+                  custom ? 'border-primary bg-primary text-primary-foreground' : 'border-input'
                 }`}
               >
-                {h}h
+                Otro
               </button>
-            ))}
+            </div>
+            {custom && (
+              <label className="flex items-center justify-center gap-2 text-sm font-semibold">
+                <input
+                  type="number"
+                  min={1}
+                  max={168}
+                  value={target}
+                  onChange={(e) =>
+                    setTarget(Math.min(168, Math.max(1, Number(e.target.value) || 1)))
+                  }
+                  className="w-24 rounded-xl border border-input bg-transparent px-3 py-2 text-center text-base"
+                />
+                horas
+              </label>
+            )}
+            <button
+              type="button"
+              onClick={start}
+              className="w-full rounded-full bg-primary px-6 py-4 text-lg font-extrabold text-primary-foreground"
+            >
+              Empezar ayuno de {target}h
+            </button>
           </div>
-          <button
-            type="button"
-            onClick={start}
-            className="w-full rounded-full bg-primary px-6 py-3 font-semibold text-primary-foreground"
-          >
-            Empezar ayuno de {target}h
-          </button>
-        </div>
-      )}
+        )}
+      </section>
 
       <PushToggle />
+
+      {fast && dialog && (
+        <FastDialog
+          fast={fast}
+          mode={dialog}
+          onClose={() => setDialog(null)}
+          onSave={(patch) => fasts().update(fast.id, patch)}
+        />
+      )}
     </main>
   )
 }
 
-function ProgressRing({
-  progress,
-  children,
-}: {
-  progress: number
-  children: React.ReactNode
-}) {
+function ProgressRing({ progress, children }: { progress: number; children: React.ReactNode }) {
   const r = 120
   const c = 2 * Math.PI * r
   return (
-    <div className="relative grid size-72 place-items-center">
-      <svg viewBox="0 0 280 280" className="absolute inset-0 -rotate-90" aria-hidden>
-        <circle cx="140" cy="140" r={r} fill="none" strokeWidth="16" className="stroke-muted" />
+    <div className="relative mx-auto grid size-72 place-items-center sm:size-80">
+      <svg viewBox="0 0 280 280" className="absolute inset-0 -rotate-90" aria-hidden="true">
+        <circle cx="140" cy="140" r={r} fill="none" strokeWidth="18" className="stroke-muted" />
         <circle
           cx="140"
           cy="140"
           r={r}
           fill="none"
-          strokeWidth="16"
+          strokeWidth="18"
           strokeLinecap="round"
           strokeDasharray={c}
           strokeDashoffset={c * (1 - progress)}
