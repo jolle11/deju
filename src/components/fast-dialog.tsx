@@ -1,4 +1,6 @@
-import { useEffect, useRef, useState } from 'react'
+import { useState } from 'react'
+import { ConfirmDialog } from '#/components/confirm-dialog'
+import { Dialog } from '#/components/dialog'
 import type { MessageKey } from '#/lib/messages'
 import type { Fast } from '#/lib/pb'
 import { type Translate, useI18n } from '#/lib/preferences'
@@ -31,17 +33,14 @@ export function FastDialog({
   onDelete?: () => Promise<unknown>
 }) {
   const { t } = useI18n()
-  const ref = useRef<HTMLDialogElement>(null)
   const [startedAt, setStartedAt] = useState(() => toLocalInput(fast.startedAt))
   const [endedAt, setEndedAt] = useState(() => toLocalInput(fast.endedAt || Date.now()))
   const [note, setNote] = useState(fast.note ?? '')
   const [rating, setRating] = useState(fast.rating ?? 0)
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
-
-  useEffect(() => {
-    ref.current?.showModal()
-  }, [])
+  const [confirmingDelete, setConfirmingDelete] = useState(false)
+  const [deleteError, setDeleteError] = useState<string | null>(null)
 
   const showStart = mode !== 'finish'
   const showEnd = mode !== 'edit-active'
@@ -49,6 +48,7 @@ export function FastDialog({
 
   async function submit(e: React.FormEvent) {
     e.preventDefault()
+    if (busy) return
     const start = new Date(startedAt).getTime()
     const end = new Date(endedAt).getTime()
     const now = Date.now()
@@ -76,13 +76,14 @@ export function FastDialog({
   }
 
   async function remove() {
-    if (!onDelete || !confirm(t('dialog.confirmDelete'))) return
+    if (!onDelete || busy) return
     setBusy(true)
+    setDeleteError(null)
     try {
       await onDelete()
       onClose()
     } catch (err) {
-      setError(err instanceof Error ? err.message : t('common.deleteError'))
+      setDeleteError(err instanceof Error ? err.message : t('common.deleteError'))
       setBusy(false)
     }
   }
@@ -90,19 +91,12 @@ export function FastDialog({
   const field = 'rounded-xl border border-input bg-transparent px-3 py-2.5 text-base'
 
   return (
-    <dialog
-      ref={ref}
+    <Dialog
+      title={mode === 'finish' ? t('dialog.finishTitle') : t('dialog.editTitle')}
       onClose={onClose}
-      className="m-auto mb-0 w-full max-w-md rounded-t-3xl bg-card p-0 text-card-foreground backdrop:bg-black/60 sm:mb-auto sm:rounded-3xl"
+      busy={busy}
     >
-      <form
-        onSubmit={submit}
-        className="flex flex-col gap-4 px-6 pt-6 pb-[max(1.5rem,env(safe-area-inset-bottom))]"
-      >
-        <h2 className="font-display text-2xl font-extrabold tracking-tight">
-          {mode === 'finish' ? t('dialog.finishTitle') : t('dialog.editTitle')}
-        </h2>
-
+      <form onSubmit={submit} className="flex flex-col gap-4">
         {showStart && (
           <label className="flex flex-col gap-1.5 text-sm font-semibold">
             {t('dialog.start')}
@@ -147,13 +141,18 @@ export function FastDialog({
           </label>
         )}
 
-        {error && <p className="text-sm text-destructive">{error}</p>}
+        {error && (
+          <p role="alert" className="text-sm text-destructive">
+            {error}
+          </p>
+        )}
 
         <div className="flex gap-2 pt-2">
           <button
             type="button"
-            onClick={() => ref.current?.close()}
-            className="flex-1 rounded-full border border-input px-4 py-3 font-bold"
+            onClick={onClose}
+            disabled={busy}
+            className="flex-1 rounded-full border border-input px-4 py-3 font-bold disabled:opacity-50"
           >
             {t('common.cancel')}
           </button>
@@ -171,7 +170,10 @@ export function FastDialog({
         {onDelete && (
           <button
             type="button"
-            onClick={remove}
+            onClick={() => {
+              setDeleteError(null)
+              setConfirmingDelete(true)
+            }}
             disabled={busy}
             className="text-sm font-semibold text-destructive"
           >
@@ -179,7 +181,19 @@ export function FastDialog({
           </button>
         )}
       </form>
-    </dialog>
+      {confirmingDelete && (
+        <ConfirmDialog
+          title={t('dialog.confirmDelete')}
+          description={t('dialog.deleteWarning')}
+          confirmLabel={t('dialog.delete')}
+          destructive
+          busy={busy}
+          error={deleteError}
+          onConfirm={remove}
+          onClose={() => setConfirmingDelete(false)}
+        />
+      )}
+    </Dialog>
   )
 }
 
