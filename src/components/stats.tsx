@@ -1,31 +1,39 @@
 import { useState } from 'react'
+import { useI18n } from '#/lib/preferences'
 import { dayKey, lastDays, startOfDay } from '#/lib/stats'
+import { capitalize, dateFormat } from '#/lib/time'
 
-const weekdayFmt = new Intl.DateTimeFormat('es', { weekday: 'narrow' })
-const dayFmt = new Intl.DateTimeFormat('es', { weekday: 'long', day: 'numeric', month: 'short' })
-const WEEKDAYS = ['L', 'M', 'X', 'J', 'V', 'S', 'D']
-const monthFmt = new Intl.DateTimeFormat('es', { month: 'long', year: 'numeric' })
-
-function capitalize(text: string) {
-  return text.charAt(0).toUpperCase() + text.slice(1)
-}
+const NARROW_DAY = { weekday: 'narrow' } as const
+const LONG_DAY = { weekday: 'long', day: 'numeric', month: 'short' } as const
+const MONTH = { month: 'long', year: 'numeric' } as const
+// Any Monday; used to label a Monday-first week in the current locale.
+const A_MONDAY = new Date(2024, 0, 1)
 
 function formatH(hours: number) {
   return `${hours.toFixed(1).replace('.0', '')}h`
 }
 
 /** Hours fasted per day (by end date) over the last 7 days. Single series. */
-export function WeeklyChart({ hoursByDay }: { hoursByDay: Map<string, number> }) {
+export function WeeklyChart({
+  hoursByDay,
+  goalHours,
+}: {
+  hoursByDay: Map<string, number>
+  goalHours: number
+}) {
+  const { t, locale } = useI18n()
+  const weekdayFmt = dateFormat(locale, NARROW_DAY)
+  const dayFmt = dateFormat(locale, LONG_DAY)
   const days = lastDays(7)
   const values = days.map((d) => hoursByDay.get(dayKey(d)) ?? 0)
-  const max = Math.max(24, ...values)
+  const max = Math.max(24, goalHours, ...values)
   const [hover, setHover] = useState<number | null>(null)
   const active = hover ?? values.length - 1
 
   return (
     <figure className="rounded-2xl border border-input p-4">
       <figcaption className="flex items-baseline justify-between">
-        <span className="font-display text-lg font-extrabold">Últimos 7 días</span>
+        <span className="font-display text-lg font-extrabold">{t('chart.last7')}</span>
         <span className="text-sm font-semibold text-muted-foreground tabular-nums">
           {capitalize(dayFmt.format(days[active]))} · {formatH(values[active])}
         </span>
@@ -33,10 +41,10 @@ export function WeeklyChart({ hoursByDay }: { hoursByDay: Map<string, number> })
       <div className="relative mt-4 h-36">
         <div
           className="pointer-events-none absolute inset-x-0 border-t border-dashed border-input"
-          style={{ bottom: `${(16 / max) * 100}%` }}
+          style={{ bottom: `${(goalHours / max) * 100}%` }}
         >
           <span className="absolute -top-4 right-0 text-[10px] font-bold text-muted-foreground">
-            16h
+            {goalHours}h
           </span>
         </div>
         <div className="absolute inset-0 flex items-end gap-[2px] border-b border-input">
@@ -80,6 +88,14 @@ export function WeeklyChart({ hoursByDay }: { hoursByDay: Map<string, number> })
 
 /** Month grid with days where a fast hit its target highlighted. */
 export function MonthCalendar({ completedDays }: { completedDays: Set<string> }) {
+  const { t, locale } = useI18n()
+  const monthFmt = dateFormat(locale, MONTH)
+  const weekdayFmt = dateFormat(locale, NARROW_DAY)
+  const weekdays = Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(A_MONDAY)
+    d.setDate(d.getDate() + i)
+    return { key: i, label: weekdayFmt.format(d) }
+  })
   const [offset, setOffset] = useState(0)
   const today = startOfDay(new Date())
   const first = new Date(today.getFullYear(), today.getMonth() + offset, 1)
@@ -98,7 +114,7 @@ export function MonthCalendar({ completedDays }: { completedDays: Set<string> })
           type="button"
           onClick={() => setOffset(offset - 1)}
           className="px-2 text-lg font-bold"
-          aria-label="Mes anterior"
+          aria-label={t('calendar.prev')}
         >
           ‹
         </button>
@@ -110,15 +126,15 @@ export function MonthCalendar({ completedDays }: { completedDays: Set<string> })
           onClick={() => setOffset(offset + 1)}
           disabled={offset >= 0}
           className="px-2 text-lg font-bold disabled:opacity-30"
-          aria-label="Mes siguiente"
+          aria-label={t('calendar.next')}
         >
           ›
         </button>
       </header>
       <div className="mt-3 grid grid-cols-7 gap-1 text-center">
-        {WEEKDAYS.map((w) => (
-          <span key={w} className="text-xs font-bold uppercase text-muted-foreground">
-            {w}
+        {weekdays.map((w) => (
+          <span key={w.key} className="text-xs font-bold uppercase text-muted-foreground">
+            {w.label}
           </span>
         ))}
         {blanks.map((key) => (
@@ -135,7 +151,7 @@ export function MonthCalendar({ completedDays }: { completedDays: Set<string> })
               } ${isToday && !done ? 'ring-2 ring-input' : ''}`}
             >
               {d.getDate()}
-              {done && <span className="sr-only"> (objetivo cumplido)</span>}
+              {done && <span className="sr-only"> ({t('history.goalMet')})</span>}
             </span>
           )
         })}

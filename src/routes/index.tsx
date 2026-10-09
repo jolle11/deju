@@ -1,13 +1,13 @@
-import { createFileRoute, redirect } from '@tanstack/react-router'
+import { createFileRoute, Link, redirect } from '@tanstack/react-router'
 import { useEffect, useState } from 'react'
-import { BottomNav } from '#/components/bottom-nav'
-import { FastDialog } from '#/components/fast-dialog'
+import { AppShell } from '#/components/app-shell'
+import { FastDialog, RATINGS } from '#/components/fast-dialog'
 import { onCollectionChange } from '#/lib/live'
-import { currentUser, currentUserId, type Fast, fasts, isLoggedIn } from '#/lib/pb'
-import { formatDate, formatDuration } from '#/lib/time'
+import { currentUserId, type Fast, fasts, isLoggedIn } from '#/lib/pb'
+import { type Translate, useI18n, usePrefs } from '#/lib/preferences'
+import { durationMs, isCompleted } from '#/lib/stats'
+import { capitalize, formatDate, formatDuration, formatHours } from '#/lib/time'
 import { type Zone, zoneAt } from '#/lib/zones'
-
-const TARGET_OPTIONS = [13, 16, 18, 20, 24, 36]
 
 export const Route = createFileRoute('/')({
   beforeLoad: () => {
@@ -16,27 +16,34 @@ export const Route = createFileRoute('/')({
   component: Home,
 })
 
-/** The running fast, or the most recently finished one. */
-function useLatestFast() {
-  const [latest, setLatest] = useState<Fast | null>(null)
-  const [loading, setLoading] = useState(true)
+/** The running fast (if any) plus the last few finished ones. */
+function useRecentFasts() {
+  const [state, setState] = useState<{ active: Fast | null; past: Fast[] } | null>(null)
 
   useEffect(() => {
     const load = () =>
-      fasts()
-        .getList(1, 1, { sort: '-startedAt', requestKey: null })
-        .then((r) => setLatest(r.items[0] ?? null))
-        .catch(() => setLatest(null))
-        .finally(() => setLoading(false))
+      Promise.all([
+        fasts()
+          .getList(1, 1, { filter: 'endedAt = ""', sort: '-startedAt', requestKey: null })
+          .then((r) => r.items[0] ?? null),
+        fasts()
+          .getList(1, 3, { filter: 'endedAt != ""', sort: '-endedAt', requestKey: null })
+          .then((r) => r.items),
+      ])
+        .then(([active, past]) => setState({ active, past }))
+        .catch(() => setState({ active: null, past: [] }))
 
     load()
     // Keep every open device in sync.
     return onCollectionChange('fasts', load)
   }, [])
 
-  const active = latest && !latest.endedAt ? latest : null
-  const lastEnded = latest?.endedAt ? latest : null
-  return { fast: active, lastEnded, loading }
+  return {
+    fast: state?.active ?? null,
+    lastEnded: state?.past[0] ?? null,
+    past: state?.past ?? [],
+    loading: state === null,
+  }
 }
 
 function useNow(enabled: boolean) {
@@ -50,22 +57,21 @@ function useNow(enabled: boolean) {
 }
 
 function Home() {
-  const { fast, lastEnded, loading } = useLatestFast()
+  const { t, locale } = useI18n()
+  const { targetHours, eatingWindowHours } = usePrefs()
+  const { fast, lastEnded, past, loading } = useRecentFasts()
   const now = useNow(Boolean(fast || lastEnded))
-  const eatingWindowHours = currentUser()?.eatingWindowHours ?? 0
-  const [target, setTarget] = useState(16)
-  const [custom, setCustom] = useState(false)
   const [dialog, setDialog] = useState<'edit-active' | 'finish' | null>(null)
 
   async function start() {
     await fasts().create({
       user: currentUserId(),
       startedAt: new Date().toISOString(),
-      targetHours: target,
+      targetHours,
     })
   }
 
-  if (loading) return null
+  if (loading) return <AppShell>{null}</AppShell>
 
   const elapsed = fast ? now - new Date(fast.startedAt).getTime() : 0
   const goalMs = fast ? fast.targetHours * 3_600_000 : 0
@@ -73,110 +79,91 @@ function Home() {
   const { zone, next } = zoneAt(elapsed)
 
   return (
-    <main className="mx-auto flex min-h-dvh max-w-md flex-col items-center px-6 pt-[max(1.5rem,env(safe-area-inset-top))] pb-[calc(6rem+env(safe-area-inset-bottom))]">
-      <header className="flex w-full items-center justify-between">
-        <h1 className="font-display text-3xl font-extrabold tracking-tight">Deju</h1>
+    <AppShell>
+      <header className="flex items-center justify-between lg:hidden">
+        <span className="font-display text-3xl font-extrabold tracking-tight">{t('app.name')}</span>
       </header>
 
-      <section className="flex w-full flex-1 flex-col items-center justify-center gap-10 py-8">
-        <ProgressRing progress={progress} color={fast ? zone.color : undefined}>
-          {fast ? (
-            <>
-              <span className="text-xs font-bold uppercase tracking-[0.2em] text-muted-foreground">
-                {progress >= 1 ? '¡Objetivo cumplido!' : `Ayuno de ${fast.targetHours}h`}
-              </span>
-              <span className="font-display text-5xl font-extrabold tracking-tight tabular-nums">
-                {formatDuration(elapsed)}
-              </span>
-              <span className="text-sm font-semibold text-muted-foreground tabular-nums">
-                {progress >= 1
-                  ? `+${formatDuration(elapsed - goalMs)}`
-                  : `Quedan ${formatDuration(goalMs - elapsed)}`}
-              </span>
-            </>
-          ) : (
-            <>
-              <span className="font-display text-6xl font-extrabold tracking-tight">{target}h</span>
-              <EatingStatus lastEnded={lastEnded} eatingWindowHours={eatingWindowHours} now={now} />
-            </>
-          )}
-        </ProgressRing>
-
-        {fast ? (
-          <div className="flex w-full flex-col items-center gap-4">
-            <ZoneCard zone={zone} next={next} elapsed={elapsed} />
-            <button
-              type="button"
-              onClick={() => setDialog('edit-active')}
-              className="text-sm font-semibold text-muted-foreground"
-            >
-              Inicio: {formatDate(fast.startedAt)} · <span className="underline">Editar</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setDialog('finish')}
-              className="w-full rounded-full bg-destructive px-6 py-4 text-lg font-extrabold text-white"
-            >
-              Terminar ayuno
-            </button>
-          </div>
-        ) : (
-          <div className="flex w-full flex-col gap-4">
-            <div className="flex flex-wrap justify-center gap-2">
-              {TARGET_OPTIONS.map((h) => (
-                <button
-                  key={h}
-                  type="button"
-                  onClick={() => {
-                    setTarget(h)
-                    setCustom(false)
-                  }}
-                  className={`rounded-full border px-4 py-1.5 text-sm font-bold ${
-                    h === target && !custom
-                      ? 'border-primary bg-primary text-primary-foreground'
-                      : 'border-input'
-                  }`}
-                >
-                  {h}h
-                </button>
-              ))}
-              <button
-                type="button"
-                onClick={() => setCustom(true)}
-                className={`rounded-full border px-4 py-1.5 text-sm font-bold ${
-                  custom ? 'border-primary bg-primary text-primary-foreground' : 'border-input'
-                }`}
-              >
-                Otro
-              </button>
-            </div>
-            {custom && (
-              <label className="flex items-center justify-center gap-2 text-sm font-semibold">
-                <input
-                  type="number"
-                  min={1}
-                  max={168}
-                  value={target}
-                  onChange={(e) =>
-                    setTarget(Math.min(168, Math.max(1, Number(e.target.value) || 1)))
-                  }
-                  className="w-24 rounded-xl border border-input bg-transparent px-3 py-2 text-center text-base"
+      <div className="grid flex-1 items-center gap-10 lg:grid-cols-[minmax(0,1fr)_22rem] lg:items-start lg:gap-12">
+        {/* Timer column */}
+        <section className="flex flex-col items-center justify-center gap-8 lg:min-h-[calc(100dvh-5rem)]">
+          <ProgressRing progress={progress} color={fast ? zone.color : undefined}>
+            {fast ? (
+              <>
+                <span className="text-xs font-bold uppercase tracking-[0.2em] text-muted-foreground">
+                  {progress >= 1
+                    ? t('home.goalReached')
+                    : t('home.fastOf', { h: fast.targetHours })}
+                </span>
+                <span className="font-display text-5xl font-extrabold tracking-tight tabular-nums lg:text-6xl">
+                  {formatDuration(elapsed)}
+                </span>
+                <span className="text-sm font-semibold text-muted-foreground tabular-nums">
+                  {progress >= 1
+                    ? `+${formatDuration(elapsed - goalMs)}`
+                    : t('home.remaining', { t: formatDuration(goalMs - elapsed) })}
+                </span>
+              </>
+            ) : (
+              <>
+                <span className="font-display text-6xl font-extrabold tracking-tight lg:text-7xl">
+                  {targetHours}h
+                </span>
+                <EatingStatus
+                  t={t}
+                  lastEnded={lastEnded}
+                  eatingWindowHours={eatingWindowHours}
+                  now={now}
                 />
-                horas
-              </label>
+              </>
             )}
-            <button
-              type="button"
-              onClick={start}
-              className="w-full rounded-full bg-primary px-6 py-4 text-lg font-extrabold text-primary-foreground"
-            >
-              Empezar ayuno de {target}h
-            </button>
-          </div>
-        )}
-      </section>
+          </ProgressRing>
 
-      <BottomNav />
+          <div className="flex w-full max-w-sm flex-col items-center gap-3">
+            {fast ? (
+              <>
+                <button
+                  type="button"
+                  onClick={() => setDialog('edit-active')}
+                  className="text-sm font-semibold text-muted-foreground"
+                >
+                  {t('home.startedAt', { date: formatDate(fast.startedAt, locale) })} ·{' '}
+                  <span className="underline">{t('home.edit')}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setDialog('finish')}
+                  className="w-full rounded-full bg-destructive px-6 py-4 text-lg font-extrabold text-white"
+                >
+                  {t('home.stop')}
+                </button>
+              </>
+            ) : (
+              <>
+                <button
+                  type="button"
+                  onClick={start}
+                  className="w-full rounded-full bg-primary px-6 py-4 text-lg font-extrabold text-primary-foreground"
+                >
+                  {t('home.start', { h: targetHours })}
+                </button>
+                <Link
+                  to="/settings"
+                  className="text-sm font-semibold text-muted-foreground underline"
+                >
+                  {t('home.changeGoal')}
+                </Link>
+              </>
+            )}
+          </div>
+        </section>
+
+        {/* Side column: below the timer on mobile, beside it on desktop */}
+        <aside className="flex flex-col gap-4 lg:pt-4">
+          {fast && <ZoneCard t={t} zone={zone} next={next} elapsed={elapsed} />}
+          <RecentFasts t={t} locale={locale} items={past} />
+        </aside>
+      </div>
 
       {fast && dialog && (
         <FastDialog
@@ -186,52 +173,100 @@ function Home() {
           onSave={(patch) => fasts().update(fast.id, patch)}
         />
       )}
-    </main>
+    </AppShell>
   )
 }
 
 function EatingStatus({
+  t,
   lastEnded,
   eatingWindowHours,
   now,
 }: {
+  t: Translate
   lastEnded: Fast | null
   eatingWindowHours: number
   now: number
 }) {
   if (!lastEnded) {
-    return <span className="text-sm font-semibold text-muted-foreground">Listo para empezar</span>
+    return <span className="text-sm font-semibold text-muted-foreground">{t('home.ready')}</span>
   }
   const eating = now - new Date(lastEnded.endedAt).getTime()
   const untilNext = eatingWindowHours * 3_600_000 - eating
   return (
     <>
       <span className="text-sm font-semibold text-muted-foreground tabular-nums">
-        Comiendo · {formatDuration(eating)}
+        {t('home.eating', { t: formatDuration(eating) })}
       </span>
       {eatingWindowHours > 0 && (
         <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground tabular-nums">
-          {untilNext > 0 ? `Siguiente ayuno en ${formatDuration(untilNext)}` : '¡Hora de ayunar!'}
+          {untilNext > 0
+            ? t('home.nextFastIn', { t: formatDuration(untilNext) })
+            : t('home.timeToFast')}
         </span>
       )}
     </>
   )
 }
 
-function ZoneCard({ zone, next, elapsed }: { zone: Zone; next?: Zone; elapsed: number }) {
+function ZoneCard({
+  t,
+  zone,
+  next,
+  elapsed,
+}: {
+  t: Translate
+  zone: Zone
+  next?: Zone
+  elapsed: number
+}) {
   return (
     <div className="w-full rounded-2xl border border-input px-4 py-3">
       <div className="flex items-center gap-2">
         <span className="size-3 rounded-full" style={{ backgroundColor: zone.color }} />
-        <span className="font-display text-lg font-extrabold">{zone.name}</span>
+        <span className="font-display text-lg font-extrabold">{t(`zone.${zone.id}`)}</span>
       </div>
-      <p className="mt-1 text-sm text-muted-foreground">{zone.description}</p>
+      <p className="mt-1 text-sm text-muted-foreground">{t(`zone.${zone.id}.desc`)}</p>
       {next && (
         <p className="mt-2 text-xs font-bold uppercase tracking-wider text-muted-foreground tabular-nums">
-          {next.name} en {formatDuration(next.fromHours * 3_600_000 - elapsed)}
+          {t('home.nextZoneIn', {
+            zone: t(`zone.${next.id}`),
+            t: formatDuration(next.fromHours * 3_600_000 - elapsed),
+          })}
         </p>
       )}
     </div>
+  )
+}
+
+/** Desktop-only summary of the last fasts. */
+function RecentFasts({ t, locale, items }: { t: Translate; locale: string; items: Fast[] }) {
+  if (items.length === 0) return null
+  return (
+    <section className="hidden flex-col gap-2 rounded-2xl border border-input p-4 lg:flex">
+      <header className="flex items-baseline justify-between">
+        <h2 className="font-display text-lg font-extrabold">{t('home.recent')}</h2>
+        <Link to="/history" className="text-sm font-semibold">
+          {t('home.seeAll')}
+        </Link>
+      </header>
+      <ul className="flex flex-col divide-y divide-input">
+        {items.map((f) => (
+          <li key={f.id} className="flex items-center gap-3 py-2">
+            <span
+              className={`size-2.5 shrink-0 rounded-full ${isCompleted(f) ? 'bg-[var(--lagoon)]' : 'bg-foreground/20'}`}
+            />
+            <span className="flex-1 text-sm text-muted-foreground">
+              {capitalize(formatDate(f.startedAt, locale))}
+              {f.rating > 0 && ` · ${RATINGS[f.rating - 1]}`}
+            </span>
+            <span className="font-display font-extrabold tabular-nums">
+              {formatHours(durationMs(f))}
+            </span>
+          </li>
+        ))}
+      </ul>
+    </section>
   )
 }
 
@@ -247,9 +282,16 @@ function ProgressRing({
   const r = 120
   const c = 2 * Math.PI * r
   return (
-    <div className="relative mx-auto grid size-72 place-items-center sm:size-80">
+    <div className="relative mx-auto grid size-72 place-items-center sm:size-80 lg:size-[26rem]">
       <svg viewBox="0 0 280 280" className="absolute inset-0 -rotate-90" aria-hidden="true">
-        <circle cx="140" cy="140" r={r} fill="none" strokeWidth="18" className="stroke-muted" />
+        <circle
+          cx="140"
+          cy="140"
+          r={r}
+          fill="none"
+          strokeWidth="18"
+          className="stroke-foreground/10"
+        />
         <circle
           cx="140"
           cy="140"
@@ -263,7 +305,7 @@ function ProgressRing({
           className="transition-[stroke-dashoffset,stroke] duration-1000"
         />
       </svg>
-      <div className="relative flex flex-col items-center gap-1">{children}</div>
+      <div className="relative flex flex-col items-center gap-1 text-center">{children}</div>
     </div>
   )
 }

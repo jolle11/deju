@@ -1,26 +1,20 @@
 import { useEffect, useRef, useState } from 'react'
+import type { MessageKey } from '#/lib/messages'
 import type { Fast } from '#/lib/pb'
+import { type Translate, useI18n } from '#/lib/preferences'
 import { fromLocalInput, toLocalInput } from '#/lib/time'
 
-export type FastPatch = Partial<
-  Pick<Fast, 'startedAt' | 'endedAt' | 'targetHours' | 'note' | 'rating'>
->
+export type FastPatch = Partial<Pick<Fast, 'startedAt' | 'endedAt' | 'note' | 'rating'>>
 
 type Mode = 'edit-active' | 'finish' | 'edit-past'
 
 export const RATINGS = ['😫', '😕', '😐', '🙂', '😄']
-const RATING_LABELS = ['Fatal', 'Mal', 'Normal', 'Bien', 'Genial']
-
-const TITLES: Record<Mode, string> = {
-  'edit-active': 'Editar ayuno',
-  finish: 'Terminar ayuno',
-  'edit-past': 'Editar ayuno',
-}
 
 /**
- * Bottom-sheet style dialog to edit a fast's times, target and note.
- * - edit-active: start time + target
- * - finish: end time + note
+ * Bottom-sheet style dialog to edit a fast's times, rating and note.
+ * The goal comes from settings, so it is not editable here.
+ * - edit-active: start time
+ * - finish: end time + rating + note
  * - edit-past: everything, plus delete
  */
 export function FastDialog({
@@ -36,10 +30,10 @@ export function FastDialog({
   onSave: (patch: FastPatch) => Promise<unknown>
   onDelete?: () => Promise<unknown>
 }) {
+  const { t } = useI18n()
   const ref = useRef<HTMLDialogElement>(null)
   const [startedAt, setStartedAt] = useState(() => toLocalInput(fast.startedAt))
   const [endedAt, setEndedAt] = useState(() => toLocalInput(fast.endedAt || Date.now()))
-  const [targetHours, setTargetHours] = useState(fast.targetHours)
   const [note, setNote] = useState(fast.note ?? '')
   const [rating, setRating] = useState(fast.rating ?? 0)
   const [error, setError] = useState<string | null>(null)
@@ -51,7 +45,6 @@ export function FastDialog({
 
   const showStart = mode !== 'finish'
   const showEnd = mode !== 'edit-active'
-  const showTarget = mode !== 'finish'
   const showNote = mode !== 'edit-active'
 
   async function submit(e: React.FormEvent) {
@@ -59,16 +52,13 @@ export function FastDialog({
     const start = new Date(startedAt).getTime()
     const end = new Date(endedAt).getTime()
     const now = Date.now()
-    if (showStart && start > now) return setError('El inicio no puede estar en el futuro.')
-    if (showEnd && end > now + 60_000) return setError('El fin no puede estar en el futuro.')
-    if (showEnd && end <= start) return setError('El fin debe ser posterior al inicio.')
-    if (showTarget && !(targetHours >= 1 && targetHours <= 168))
-      return setError('El objetivo debe estar entre 1 y 168 horas.')
+    if (showStart && start > now) return setError(t('dialog.startFuture'))
+    if (showEnd && end > now + 60_000) return setError(t('dialog.endFuture'))
+    if (showEnd && end <= start) return setError(t('dialog.endBeforeStart'))
 
     const patch: FastPatch = {}
     if (showStart) patch.startedAt = fromLocalInput(startedAt)
     if (showEnd) patch.endedAt = fromLocalInput(endedAt)
-    if (showTarget) patch.targetHours = targetHours
     if (showNote) {
       patch.note = note.trim()
       patch.rating = rating
@@ -80,19 +70,19 @@ export function FastDialog({
       await onSave(patch)
       onClose()
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Error al guardar')
+      setError(err instanceof Error ? err.message : t('common.saveError'))
       setBusy(false)
     }
   }
 
   async function remove() {
-    if (!onDelete || !confirm('¿Borrar este ayuno?')) return
+    if (!onDelete || !confirm(t('dialog.confirmDelete'))) return
     setBusy(true)
     try {
       await onDelete()
       onClose()
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Error al borrar')
+      setError(err instanceof Error ? err.message : t('common.deleteError'))
       setBusy(false)
     }
   }
@@ -109,11 +99,13 @@ export function FastDialog({
         onSubmit={submit}
         className="flex flex-col gap-4 px-6 pt-6 pb-[max(1.5rem,env(safe-area-inset-bottom))]"
       >
-        <h2 className="font-display text-2xl font-extrabold tracking-tight">{TITLES[mode]}</h2>
+        <h2 className="font-display text-2xl font-extrabold tracking-tight">
+          {mode === 'finish' ? t('dialog.finishTitle') : t('dialog.editTitle')}
+        </h2>
 
         {showStart && (
           <label className="flex flex-col gap-1.5 text-sm font-semibold">
-            Inicio
+            {t('dialog.start')}
             <input
               type="datetime-local"
               required
@@ -127,7 +119,7 @@ export function FastDialog({
 
         {showEnd && (
           <label className="flex flex-col gap-1.5 text-sm font-semibold">
-            Fin
+            {t('dialog.end')}
             <input
               type="datetime-local"
               required
@@ -139,31 +131,16 @@ export function FastDialog({
           </label>
         )}
 
-        {showTarget && (
-          <label className="flex flex-col gap-1.5 text-sm font-semibold">
-            Objetivo (horas)
-            <input
-              type="number"
-              required
-              min={1}
-              max={168}
-              value={targetHours}
-              onChange={(e) => setTargetHours(Number(e.target.value))}
-              className={field}
-            />
-          </label>
-        )}
-
-        {showNote && <RatingPicker value={rating} onChange={setRating} />}
+        {showNote && <RatingPicker t={t} value={rating} onChange={setRating} />}
 
         {showNote && (
           <label className="flex flex-col gap-1.5 text-sm font-semibold">
-            Nota
+            {t('dialog.note')}
             <textarea
               rows={3}
               maxLength={500}
               value={note}
-              placeholder="Algo que quieras recordar…"
+              placeholder={t('dialog.notePlaceholder')}
               onChange={(e) => setNote(e.target.value)}
               className={`${field} resize-none font-normal`}
             />
@@ -178,7 +155,7 @@ export function FastDialog({
             onClick={() => ref.current?.close()}
             className="flex-1 rounded-full border border-input px-4 py-3 font-bold"
           >
-            Cancelar
+            {t('common.cancel')}
           </button>
           <button
             type="submit"
@@ -187,7 +164,7 @@ export function FastDialog({
               mode === 'finish' ? 'bg-destructive text-white' : 'bg-primary text-primary-foreground'
             }`}
           >
-            {mode === 'finish' ? 'Terminar' : 'Guardar'}
+            {mode === 'finish' ? t('dialog.finish') : t('common.save')}
           </button>
         </div>
 
@@ -198,7 +175,7 @@ export function FastDialog({
             disabled={busy}
             className="text-sm font-semibold text-destructive"
           >
-            Borrar ayuno
+            {t('dialog.delete')}
           </button>
         )}
       </form>
@@ -206,10 +183,18 @@ export function FastDialog({
   )
 }
 
-function RatingPicker({ value, onChange }: { value: number; onChange: (v: number) => void }) {
+function RatingPicker({
+  t,
+  value,
+  onChange,
+}: {
+  t: Translate
+  value: number
+  onChange: (v: number) => void
+}) {
   return (
     <fieldset className="flex flex-col gap-1.5">
-      <legend className="mb-1.5 text-sm font-semibold">¿Cómo te has sentido?</legend>
+      <legend className="mb-1.5 text-sm font-semibold">{t('dialog.howDidYouFeel')}</legend>
       <div className="flex justify-between gap-2">
         {RATINGS.map((emoji, i) => {
           const v = i + 1
@@ -219,7 +204,7 @@ function RatingPicker({ value, onChange }: { value: number; onChange: (v: number
               key={emoji}
               type="button"
               aria-pressed={selected}
-              aria-label={RATING_LABELS[i]}
+              aria-label={t(`rating.${v}` as MessageKey)}
               onClick={() => onChange(selected ? 0 : v)}
               className={`grid size-12 place-items-center rounded-full border text-2xl transition-transform ${
                 selected

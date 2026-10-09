@@ -117,6 +117,50 @@
   --sidebar-ring: oklch(0.442 0.017 285.786);
 }
 
+/* Accent variations. Light values are darker for contrast on light surfaces. */
+:root {
+  color-scheme: light;
+}
+.dark {
+  color-scheme: dark;
+}
+:root[data-accent='sunset'] {
+  --lagoon: #e0662f;
+  --lagoon-deep: #b84d1f;
+  --hero-a: rgba(224, 102, 47, 0.3);
+  --hero-b: rgba(184, 77, 31, 0.16);
+}
+:root[data-accent='violet'] {
+  --lagoon: #7c5cff;
+  --lagoon-deep: #5b3fd9;
+  --hero-a: rgba(124, 92, 255, 0.28);
+  --hero-b: rgba(91, 63, 217, 0.16);
+}
+:root[data-accent='forest'] {
+  --lagoon: #2f8a4f;
+  --lagoon-deep: #226b3c;
+  --hero-a: rgba(47, 138, 79, 0.28);
+  --hero-b: rgba(34, 107, 60, 0.16);
+}
+.dark[data-accent='sunset'] {
+  --lagoon: #ff9a5c;
+  --lagoon-deep: #ffbb8a;
+  --hero-a: rgba(255, 154, 92, 0.16);
+  --hero-b: rgba(255, 187, 138, 0.1);
+}
+.dark[data-accent='violet'] {
+  --lagoon: #a78bfa;
+  --lagoon-deep: #c4b5fd;
+  --hero-a: rgba(167, 139, 250, 0.18);
+  --hero-b: rgba(196, 181, 253, 0.1);
+}
+.dark[data-accent='forest'] {
+  --lagoon: #6ec89a;
+  --lagoon-deep: #9edcb8;
+  --hero-a: rgba(110, 200, 154, 0.16);
+  --hero-b: rgba(158, 220, 184, 0.1);
+}
+
 @theme inline {
   --font-sans: 'Manrope', ui-sans-serif, system-ui, sans-serif;
   --font-display: 'Bricolage Grotesque', 'Manrope', ui-sans-serif, system-ui, sans-serif;

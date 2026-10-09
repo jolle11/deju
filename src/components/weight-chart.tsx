@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import type { Weight } from '#/lib/pb'
-
-const dateFmt = new Intl.DateTimeFormat('es', { day: 'numeric', month: 'short' })
+import { useI18n } from '#/lib/preferences'
+import { dateFormat } from '#/lib/time'
 
 const W = 320
 const H = 140
@@ -9,6 +9,8 @@ const PAD = { top: 16, right: 12, bottom: 20, left: 12 }
 
 /** Single-series weight trend. Expects entries sorted by date ascending. */
 export function WeightChart({ entries }: { entries: Weight[] }) {
+  const { t, locale } = useI18n()
+  const dateFmt = dateFormat(locale, { day: 'numeric', month: 'short' })
   const [hover, setHover] = useState<number | null>(null)
   if (entries.length < 2) return null
 
@@ -38,7 +40,7 @@ export function WeightChart({ entries }: { entries: Weight[] }) {
   return (
     <figure className="flex flex-col gap-2">
       <figcaption className="flex items-baseline justify-between text-sm font-semibold text-muted-foreground">
-        <span>Evolución</span>
+        <span>{t('weight.trend')}</span>
         <span className="tabular-nums">
           {dateFmt.format(times[active])} ·{' '}
           <span className="font-display text-base font-extrabold text-foreground">
@@ -50,7 +52,7 @@ export function WeightChart({ entries }: { entries: Weight[] }) {
         viewBox={`0 0 ${W} ${H}`}
         className="w-full touch-none"
         role="img"
-        aria-label={`Peso de ${kgs[0]} a ${kgs[kgs.length - 1]} kg`}
+        aria-label={t('weight.range', { from: kgs[0], to: kgs[kgs.length - 1] })}
         onPointerMove={onMove}
         onPointerLeave={() => setHover(null)}
       >

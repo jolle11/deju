@@ -1,12 +1,19 @@
 import PocketBase, { ClientResponseError } from 'pocketbase'
 import webpush from 'web-push'
 import { env } from './env.ts'
+import { TEXTS, toLocale } from './i18n.ts'
 import { reachedMilestones } from './milestones.ts'
 
-type Fast = { id: string; user: string; startedAt: string; targetHours: number }
+type Fast = {
+  id: string
+  user: string
+  startedAt: string
+  targetHours: number
+  expand?: { user?: { locale?: string } }
+}
 type PushSub = { id: string; endpoint: string; p256dh: string; auth: string }
 type LogEntry = { kind: string }
-type User = { id: string; eatingWindowHours: number }
+type User = { id: string; eatingWindowHours: number; locale: string }
 type EndedFast = { id: string; endedAt: string }
 
 webpush.setVapidDetails(env.vapidSubject, env.vapidPublicKey, env.vapidPrivateKey)
@@ -58,10 +65,15 @@ async function claim(fastId: string, kind: string) {
 async function tick() {
   await ensureAuth()
   const now = new Date()
-  const active = await pb.collection('fasts').getFullList<Fast>({ filter: 'endedAt = ""' })
+  const active = await pb.collection('fasts').getFullList<Fast>({
+    filter: 'endedAt = ""',
+    expand: 'user',
+    fields: 'id,user,startedAt,targetHours,expand.user.locale',
+  })
 
   for (const fast of active) {
-    const reached = reachedMilestones(new Date(fast.startedAt), fast.targetHours, now)
+    const locale = toLocale(fast.expand?.user?.locale)
+    const reached = reachedMilestones(new Date(fast.startedAt), fast.targetHours, now, locale)
     if (reached.length === 0) continue
 
     const sent = await pb.collection('notification_log').getFullList<LogEntry>({
@@ -96,19 +108,23 @@ async function tick() {
 async function remindNextFast(now: Date) {
   const users = await pb
     .collection('users')
-    .getFullList<User>({ filter: 'eatingWindowHours > 0', fields: 'id,eatingWindowHours' })
+    .getFullList<User>({ filter: 'eatingWindowHours > 0', fields: 'id,eatingWindowHours,locale' })
 
   for (const user of users) {
-    const last = await pb
-      .collection('fasts')
-      .getList<EndedFast>(1, 1, {
-        filter: pb.filter('user = {:id}', { id: user.id }),
-        sort: '-startedAt',
-        fields: 'id,endedAt',
-      })
-      .then((r) => r.items[0])
-    // No history, or a fast is already running.
-    if (!last?.endedAt) continue
+    const latest = (filter: string, sort: string) =>
+      pb
+        .collection('fasts')
+        .getList<EndedFast>(1, 1, {
+          filter: pb.filter(`user = {:id} && ${filter}`, { id: user.id }),
+          sort,
+          fields: 'id,endedAt',
+        })
+        .then((r) => r.items[0])
+
+    // A fast is already running: nothing to remind.
+    if (await latest('endedAt = ""', '-startedAt')) continue
+    const last = await latest('endedAt != ""', '-endedAt')
+    if (!last) continue
 
     const dueAt = new Date(last.endedAt).getTime() + user.eatingWindowHours * 3_600_000
     // Skip if due long ago (e.g. worker was down), to avoid stale nudges.
@@ -116,8 +132,8 @@ async function remindNextFast(now: Date) {
 
     if (await claim(last.id, 'next-fast')) {
       await sendToUser(user.id, {
-        title: '⏱️ Hora de ayunar',
-        body: `Tu ventana de comida de ${user.eatingWindowHours}h ha terminado. ¿Empezamos?`,
+        title: TEXTS[toLocale(user.locale)].nextTitle,
+        body: TEXTS[toLocale(user.locale)].nextBody(user.eatingWindowHours),
         tag: `next-${last.id}`,
         url: '/',
       })

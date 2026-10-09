@@ -25,14 +25,29 @@ export function fromLocalInput(value: string) {
   return new Date(value).toISOString()
 }
 
-const dateFmt = new Intl.DateTimeFormat('es', {
-  weekday: 'short',
-  day: 'numeric',
-  month: 'short',
-  hour: '2-digit',
-  minute: '2-digit',
-})
+const dateFormats = new Map<string, Intl.DateTimeFormat>()
 
-export function formatDate(iso: string) {
-  return dateFmt.format(new Date(iso))
+/** Cached Intl formatter per locale + options (formatters are costly to build). */
+export function dateFormat(locale: string, options: Intl.DateTimeFormatOptions) {
+  const key = `${locale}|${JSON.stringify(options)}`
+  let fmt = dateFormats.get(key)
+  if (!fmt) {
+    fmt = new Intl.DateTimeFormat(locale, options)
+    dateFormats.set(key, fmt)
+  }
+  return fmt
+}
+
+export function formatDate(iso: string, locale: string) {
+  return dateFormat(locale, {
+    weekday: 'short',
+    day: 'numeric',
+    month: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(new Date(iso))
+}
+
+export function capitalize(text: string) {
+  return text.charAt(0).toUpperCase() + text.slice(1)
 }

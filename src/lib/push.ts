@@ -2,6 +2,9 @@ import { currentUserId, pb } from './pb'
 
 const vapidPublicKey = import.meta.env.VITE_VAPID_PUBLIC_KEY
 
+/** Thrown when the user declines notifications; callers show a translated message. */
+export class PushPermissionError extends Error {}
+
 export function pushSupported() {
   return (
     'serviceWorker' in navigator &&
@@ -24,7 +27,7 @@ export async function getPushSubscription() {
 
 export async function enablePush() {
   const permission = await Notification.requestPermission()
-  if (permission !== 'granted') throw new Error('Permiso de notificaciones denegado')
+  if (permission !== 'granted') throw new PushPermissionError()
 
   const reg = await navigator.serviceWorker.ready
   const sub =

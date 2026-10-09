@@ -22,6 +22,12 @@ export type User = RecordModel & {
   email: string
   /** 0 = no next-fast reminder */
   eatingWindowHours: number
+  language: string
+  /** Locale the client resolved; used by the worker for notifications. */
+  locale: string
+  theme: string
+  accent: string
+  targetHours: number
 }
 
 export const fasts = () => pb.collection<Fast>('fasts')

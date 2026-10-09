@@ -1,12 +1,14 @@
 import { createFileRoute, redirect } from '@tanstack/react-router'
 import { useEffect, useState } from 'react'
-import { BottomNav } from '#/components/bottom-nav'
+import { AppShell } from '#/components/app-shell'
 import { FastDialog, RATINGS } from '#/components/fast-dialog'
 import { MonthCalendar, WeeklyChart } from '#/components/stats'
+import { WeightSection } from '#/components/weight-section'
 import { onCollectionChange } from '#/lib/live'
 import { type Fast, fasts, isLoggedIn } from '#/lib/pb'
+import { useI18n, usePrefs } from '#/lib/preferences'
 import { computeStats, durationMs, isCompleted } from '#/lib/stats'
-import { formatDate, formatHours } from '#/lib/time'
+import { capitalize, formatDate, formatHours } from '#/lib/time'
 
 export const Route = createFileRoute('/history')({
   beforeLoad: () => {
@@ -33,81 +35,87 @@ function usePastFasts() {
 }
 
 function History() {
+  const { t, locale } = useI18n()
+  const { targetHours } = usePrefs()
   const items = usePastFasts()
   const [editing, setEditing] = useState<Fast | null>(null)
 
-  if (!items) return null
+  if (!items) return <AppShell title={t('history.title')}>{null}</AppShell>
 
   const stats = computeStats(items)
 
   return (
-    <main className="mx-auto flex min-h-dvh max-w-md flex-col gap-6 px-6 pt-[max(1.5rem,env(safe-area-inset-top))] pb-[calc(6rem+env(safe-area-inset-bottom))]">
-      <header className="flex w-full items-center justify-between">
-        <h1 className="font-display text-3xl font-extrabold tracking-tight">Historial</h1>
-      </header>
-
+    <AppShell title={t('history.title')}>
       {items.length === 0 ? (
-        <p className="py-16 text-center text-muted-foreground">
-          Aún no has terminado ningún ayuno.
-        </p>
-      ) : (
         <>
-          <dl className="grid grid-cols-3 gap-2 text-center">
-            <Stat label="Racha" value={`${stats.streak}d`} />
-            <Stat label="Mejor racha" value={`${stats.bestStreak}d`} />
-            <Stat label="Cumplidos" value={`${stats.completed}/${stats.total}`} />
-            <Stat label="Media" value={formatTileHours(stats.averageMs)} />
-            <Stat label="Más largo" value={formatTileHours(stats.longestMs)} />
-            <Stat label="Total" value={`${Math.round(stats.totalMs / 3_600_000)}h`} />
-          </dl>
-
-          <WeeklyChart hoursByDay={stats.hoursByDay} />
-          <MonthCalendar completedDays={stats.completedDays} />
-
-          <h2 className="font-display text-xl font-extrabold">Ayunos</h2>
-
-          <ul className="flex flex-col gap-2">
-            {items.map((f) => {
-              const ms = durationMs(f)
-              const done = isCompleted(f)
-              return (
-                <li key={f.id}>
-                  <button
-                    type="button"
-                    onClick={() => setEditing(f)}
-                    className="flex w-full items-center gap-4 rounded-2xl border border-input px-4 py-3 text-left"
-                  >
-                    <span
-                      className={`size-3 shrink-0 rounded-full ${done ? 'bg-[var(--lagoon)]' : 'bg-muted'}`}
-                    >
-                      <span className="sr-only">
-                        {done ? 'Objetivo cumplido' : 'Objetivo no cumplido'}
-                      </span>
-                    </span>
-                    <span className="flex min-w-0 flex-1 flex-col">
-                      <span className="text-sm font-semibold capitalize text-muted-foreground">
-                        {formatDate(f.startedAt)}
-                        {f.rating > 0 && ` · ${RATINGS[f.rating - 1]}`}
-                      </span>
-                      {f.note && <span className="truncate text-sm">{f.note}</span>}
-                    </span>
-                    <span className="flex flex-col items-end">
-                      <span className="font-display text-xl font-extrabold tabular-nums">
-                        {formatHours(ms)}
-                      </span>
-                      <span className="text-xs font-semibold text-muted-foreground">
-                        de {f.targetHours}h
-                      </span>
-                    </span>
-                  </button>
-                </li>
-              )
-            })}
-          </ul>
+          <p className="py-16 text-center text-muted-foreground">{t('history.empty')}</p>
+          <WeightSection />
         </>
-      )}
+      ) : (
+        <div className="grid gap-6 lg:grid-cols-2 lg:items-start">
+          <div className="flex flex-col gap-6">
+            <dl className="grid grid-cols-3 gap-2 text-center">
+              <Stat label={t('history.streak')} value={t('history.days', { n: stats.streak })} />
+              <Stat
+                label={t('history.bestStreak')}
+                value={t('history.days', { n: stats.bestStreak })}
+              />
+              <Stat label={t('history.completed')} value={`${stats.completed}/${stats.total}`} />
+              <Stat label={t('history.average')} value={formatTileHours(stats.averageMs)} />
+              <Stat label={t('history.longest')} value={formatTileHours(stats.longestMs)} />
+              <Stat
+                label={t('history.total')}
+                value={`${Math.round(stats.totalMs / 3_600_000)}h`}
+              />
+            </dl>
 
-      <BottomNav />
+            <WeeklyChart hoursByDay={stats.hoursByDay} goalHours={targetHours} />
+            <MonthCalendar completedDays={stats.completedDays} />
+            <WeightSection />
+          </div>
+
+          <section className="flex flex-col gap-3">
+            <h2 className="font-display text-xl font-extrabold">{t('history.fasts')}</h2>
+            <ul className="flex flex-col gap-2">
+              {items.map((f) => {
+                const done = isCompleted(f)
+                return (
+                  <li key={f.id}>
+                    <button
+                      type="button"
+                      onClick={() => setEditing(f)}
+                      className="flex w-full items-center gap-4 rounded-2xl border border-input px-4 py-3 text-left transition-colors hover:bg-muted/40"
+                    >
+                      <span
+                        className={`size-3 shrink-0 rounded-full ${done ? 'bg-[var(--lagoon)]' : 'bg-foreground/20'}`}
+                      >
+                        <span className="sr-only">
+                          {done ? t('history.goalMet') : t('history.goalMissed')}
+                        </span>
+                      </span>
+                      <span className="flex min-w-0 flex-1 flex-col">
+                        <span className="text-sm font-semibold text-muted-foreground">
+                          {capitalize(formatDate(f.startedAt, locale))}
+                          {f.rating > 0 && ` · ${RATINGS[f.rating - 1]}`}
+                        </span>
+                        {f.note && <span className="truncate text-sm">{f.note}</span>}
+                      </span>
+                      <span className="flex flex-col items-end">
+                        <span className="font-display text-xl font-extrabold tabular-nums">
+                          {formatHours(durationMs(f))}
+                        </span>
+                        <span className="text-xs font-semibold text-muted-foreground">
+                          {t('history.ofTarget', { h: f.targetHours })}
+                        </span>
+                      </span>
+                    </button>
+                  </li>
+                )
+              })}
+            </ul>
+          </section>
+        </div>
+      )}
 
       {editing && (
         <FastDialog
@@ -118,7 +126,7 @@ function History() {
           onDelete={() => fasts().delete(editing.id)}
         />
       )}
-    </main>
+    </AppShell>
   )
 }
 

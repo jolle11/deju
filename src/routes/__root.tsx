@@ -3,6 +3,7 @@ import { createRootRoute, HeadContent, Scripts } from '@tanstack/react-router'
 import { TanStackRouterDevtoolsPanel } from '@tanstack/react-router-devtools'
 import { useEffect } from 'react'
 
+import { STORAGE_KEY } from '#/lib/preferences'
 import appCss from '../styles.css?url'
 
 export const Route = createRootRoute({
@@ -37,6 +38,9 @@ export const Route = createRootRoute({
   shellComponent: RootDocument,
 })
 
+/** Applies the cached theme before first paint so there is no light/dark flash. */
+const THEME_BOOT_SCRIPT = `try{var p=JSON.parse(localStorage.getItem(${JSON.stringify(STORAGE_KEY)})||'{}');var d=p.theme?p.theme==='dark':matchMedia('(prefers-color-scheme: dark)').matches;var r=document.documentElement;r.classList.toggle('dark',d);r.dataset.accent=p.accent||'lagoon';if(p.language)r.lang=p.language}catch(e){}`
+
 function useServiceWorker() {
   useEffect(() => {
     if (!('serviceWorker' in navigator)) return
@@ -48,8 +52,11 @@ function RootDocument({ children }: { children: React.ReactNode }) {
   useServiceWorker()
 
   return (
-    <html lang="es" className="dark [color-scheme:dark]">
+    // The inline script below adjusts class/lang/data-accent before hydration.
+    <html lang="es" className="dark" suppressHydrationWarning>
       <head>
+        {/* biome-ignore lint/security/noDangerouslySetInnerHtml: static, avoids a theme flash */}
+        <script dangerouslySetInnerHTML={{ __html: THEME_BOOT_SCRIPT }} />
         <HeadContent />
       </head>
       <body className="min-h-dvh bg-background text-foreground antialiased">
