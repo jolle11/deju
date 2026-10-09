@@ -102,17 +102,13 @@ function Home() {
                 </span>
               </>
             ) : (
-              <>
-                <span className="font-display text-6xl font-extrabold tracking-tight lg:text-7xl">
-                  {targetHours}h
-                </span>
-                <EatingStatus
-                  t={t}
-                  lastEnded={lastEnded}
-                  eatingWindowHours={eatingWindowHours}
-                  now={now}
-                />
-              </>
+              <IdleStatus
+                t={t}
+                lastEnded={lastEnded}
+                targetHours={targetHours}
+                eatingWindowHours={eatingWindowHours}
+                now={now}
+              />
             )}
           </ProgressRing>
 
@@ -174,29 +170,42 @@ function Home() {
   )
 }
 
-function EatingStatus({
+/** Between fasts: counts up from the end of the last one. */
+function IdleStatus({
   t,
   lastEnded,
+  targetHours,
   eatingWindowHours,
   now,
 }: {
   t: Translate
   lastEnded: Fast | null
+  targetHours: number
   eatingWindowHours: number
   now: number
 }) {
   if (!lastEnded) {
-    return <span className="text-sm font-semibold text-muted-foreground">{t('home.ready')}</span>
+    return (
+      <>
+        <span className="font-display text-6xl font-extrabold tracking-tight lg:text-7xl">
+          {targetHours}h
+        </span>
+        <span className="text-sm font-semibold text-muted-foreground">{t('home.ready')}</span>
+      </>
+    )
   }
-  const eating = now - new Date(lastEnded.endedAt).getTime()
-  const untilNext = eatingWindowHours * 3_600_000 - eating
+  const since = now - new Date(lastEnded.endedAt).getTime()
+  const untilNext = eatingWindowHours * 3_600_000 - since
   return (
     <>
-      <span className="text-sm font-semibold text-muted-foreground tabular-nums">
-        {t('home.eating', { t: formatDuration(eating) })}
+      <span className="text-xs font-bold uppercase tracking-[0.2em] text-muted-foreground">
+        {t('home.sinceLast')}
+      </span>
+      <span className="font-display text-5xl font-extrabold tracking-tight tabular-nums lg:text-6xl">
+        {formatDuration(since)}
       </span>
       {eatingWindowHours > 0 && (
-        <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground tabular-nums">
+        <span className="text-sm font-semibold text-muted-foreground tabular-nums">
           {untilNext > 0
             ? t('home.nextFastIn', { t: formatDuration(untilNext) })
             : t('home.timeToFast')}
