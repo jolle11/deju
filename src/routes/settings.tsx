@@ -2,6 +2,7 @@ import { createFileRoute, redirect, useNavigate } from '@tanstack/react-router'
 import { Monitor, Moon, Sun } from 'lucide-react'
 import { type ReactNode, useState } from 'react'
 import { AppShell } from '#/components/app-shell'
+import { DataSection } from '#/components/data-section'
 import { PushToggle } from '#/components/push-toggle'
 import { LOCALE_NAMES, LOCALES } from '#/lib/messages'
 import { currentUser, fasts, isLoggedIn, pb } from '#/lib/pb'
@@ -98,6 +99,8 @@ function Settings() {
           <Card>
             <PushToggle />
           </Card>
+
+          <DataSection />
         </div>
 
         <div className="flex flex-col gap-4 lg:gap-6">

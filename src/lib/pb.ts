@@ -12,12 +12,6 @@ export type Fast = RecordModel & {
   rating: number
 }
 
-export type Weight = RecordModel & {
-  user: string
-  kg: number
-  measuredAt: string
-}
-
 export type User = RecordModel & {
   email: string
   /** 0 = no next-fast reminder */
@@ -31,7 +25,6 @@ export type User = RecordModel & {
 }
 
 export const fasts = () => pb.collection<Fast>('fasts')
-export const weights = () => pb.collection<Weight>('weights')
 export const users = () => pb.collection<User>('users')
 
 export function currentUser() {

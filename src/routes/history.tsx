@@ -3,7 +3,6 @@ import { useEffect, useState } from 'react'
 import { AppShell } from '#/components/app-shell'
 import { FastDialog, RATINGS } from '#/components/fast-dialog'
 import { MonthCalendar, WeeklyChart } from '#/components/stats'
-import { WeightSection } from '#/components/weight-section'
 import { onCollectionChange } from '#/lib/live'
 import { type Fast, fasts, isLoggedIn } from '#/lib/pb'
 import { useI18n, usePrefs } from '#/lib/preferences'
@@ -47,10 +46,7 @@ function History() {
   return (
     <AppShell title={t('history.title')}>
       {items.length === 0 ? (
-        <>
-          <p className="py-16 text-center text-muted-foreground">{t('history.empty')}</p>
-          <WeightSection />
-        </>
+        <p className="py-16 text-center text-muted-foreground">{t('history.empty')}</p>
       ) : (
         <div className="grid gap-6 lg:grid-cols-2 lg:items-start">
           <div className="flex flex-col gap-6">
@@ -71,7 +67,6 @@ function History() {
 
             <WeeklyChart hoursByDay={stats.hoursByDay} goalHours={targetHours} />
             <MonthCalendar completedDays={stats.completedDays} />
-            <WeightSection />
           </div>
 
           <section className="flex flex-col gap-3">
