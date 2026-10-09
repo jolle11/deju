@@ -1,4 +1,4 @@
-import { Check, ChevronDown, Contrast, Languages, Monitor, Moon, Sun } from 'lucide-react'
+import { Check, ChevronDown, Languages, Monitor, Moon, Sun } from 'lucide-react'
 import { type ComponentType, useEffect, useId, useRef, useState } from 'react'
 import { LOCALE_NAMES, LOCALES } from '#/lib/messages'
 import {
@@ -10,8 +10,7 @@ import {
   usePrefs,
 } from '#/lib/preferences'
 
-const THEME_ICON = { '': Contrast, system: Monitor, light: Sun, dark: Moon } as const
-const THEME_LABEL = { '': 'default', system: 'system', light: 'light', dark: 'dark' } as const
+const THEME_ICON = { system: Monitor, light: Sun, dark: Moon } as const
 
 type Icon = ComponentType<{ className?: string }>
 type Option<T extends string> = { value: T; label: string; icon?: Icon }
@@ -48,7 +47,7 @@ export function QuickPrefs({ className = '' }: { className?: string }) {
         onChange={(theme: ThemePref) => save({ theme })}
         options={THEMES.map((theme) => ({
           value: theme,
-          label: t(`settings.theme.${THEME_LABEL[theme]}`),
+          label: t(`settings.theme.${theme}`),
           icon: THEME_ICON[theme],
         }))}
       />

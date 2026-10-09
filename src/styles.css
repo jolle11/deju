@@ -161,7 +161,7 @@
   --hero-b: rgba(158, 220, 184, 0.1);
 }
 
-/* Default theme: monochrome palettes that follow the light/dark scheme and ignore the accent. */
+/* Default palette supports both light and dark appearance modes. */
 :root[data-theme='default'] {
   --sea-ink: #171717;
   --sea-ink-soft: #525252;
@@ -474,8 +474,8 @@ a {
   }
 }
 
-/* Remove decorative color and gradients from the monochrome themes. */
-:root:is([data-theme='mono-light'], [data-theme='mono-dark']) {
+/* Remove decorative color and gradients from the default palette. */
+:root[data-theme='default'] {
   body {
     background: var(--bg-base);
   }

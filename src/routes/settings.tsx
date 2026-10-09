@@ -10,7 +10,6 @@ import { currentUser, fasts, isLoggedIn, pb } from '#/lib/pb'
 import {
   ACCENTS,
   type Accent,
-  isMonochromeTheme,
   type Prefs,
   type ThemePref,
   updatePrefs,
@@ -22,6 +21,7 @@ const WINDOW_OPTIONS = [0, 4, 6, 8, 10, 12]
 
 /** Swatch shown in the picker; matches the light-theme accent in styles.css. */
 const ACCENT_SWATCH: Record<Accent, string> = {
+  default: '#737373',
   lagoon: '#4fb8b2',
   sunset: '#e0662f',
   violet: '#7c5cff',
@@ -30,10 +30,9 @@ const ACCENT_SWATCH: Record<Accent, string> = {
 
 const THEME_OPTIONS: {
   value: ThemePref
-  label: 'default' | 'system' | 'light' | 'dark'
+  label: ThemePref
   Icon: typeof Sun
 }[] = [
-  { value: '', label: 'default', Icon: Contrast },
   { value: 'system', label: 'system', Icon: Monitor },
   { value: 'light', label: 'light', Icon: Sun },
   { value: 'dark', label: 'dark', Icon: Moon },
@@ -113,7 +112,7 @@ function Settings() {
             <div className="flex flex-col gap-2">
               <span className="text-sm font-semibold">{t('settings.theme')}</span>
               <div
-                className="grid grid-cols-2 gap-2 sm:grid-cols-4"
+                className="grid grid-cols-3 gap-2"
                 role="radiogroup"
                 aria-label={t('settings.theme')}
               >
@@ -141,33 +140,40 @@ function Settings() {
               </div>
             </div>
 
-            {!isMonochromeTheme(prefs.theme) && (
-              <div className="flex flex-col gap-2">
-                <span className="text-sm font-semibold">{t('settings.accent')}</span>
-                <div className="flex flex-wrap gap-3" role="radiogroup">
-                  {ACCENTS.map((accent) => {
-                    const selected = prefs.accent === accent
-                    return (
-                      // biome-ignore lint/a11y/useSemanticElements: styled swatch picker
-                      <button
-                        key={accent}
-                        type="button"
-                        role="radio"
-                        aria-checked={selected}
-                        onClick={() => save({ accent })}
-                        className="flex items-center gap-2 rounded-full border border-input py-1.5 pr-4 pl-1.5 text-sm font-bold aria-checked:border-foreground"
-                      >
+            <div className="flex flex-col gap-2">
+              <span className="text-sm font-semibold">{t('settings.accent')}</span>
+              <div
+                className="flex flex-wrap gap-3"
+                role="radiogroup"
+                aria-label={t('settings.accent')}
+              >
+                {ACCENTS.map((accent) => {
+                  const selected = prefs.accent === accent
+                  return (
+                    // biome-ignore lint/a11y/useSemanticElements: styled swatch picker
+                    <button
+                      key={accent}
+                      type="button"
+                      role="radio"
+                      aria-checked={selected}
+                      onClick={() => save({ accent })}
+                      className="flex items-center gap-2 rounded-full border border-input py-1.5 pr-4 pl-1.5 text-sm font-bold aria-checked:border-foreground"
+                    >
+                      {accent === 'default' ? (
+                        <Contrast className="size-6 text-muted-foreground" aria-hidden="true" />
+                      ) : (
                         <span
                           className="size-6 rounded-full"
                           style={{ backgroundColor: ACCENT_SWATCH[accent] }}
+                          aria-hidden="true"
                         />
-                        {t(`settings.accent.${accent}`)}
-                      </button>
-                    )
-                  })}
-                </div>
+                      )}
+                      {t(`settings.accent.${accent}`)}
+                    </button>
+                  )
+                })}
               </div>
-            )}
+            </div>
           </Card>
 
           <Card title={t('settings.language')}>

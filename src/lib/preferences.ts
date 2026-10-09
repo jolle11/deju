@@ -2,16 +2,15 @@ import { useSyncExternalStore } from 'react'
 import { LOCALES, type Locale, MESSAGES, type MessageKey } from './messages'
 import { currentUser, pb, users } from './pb'
 
-/** '' is the monochrome default; 'system' is the colored theme following the OS. */
-export const THEMES = ['', 'system', 'light', 'dark'] as const
+export const THEMES = ['system', 'light', 'dark'] as const
 export type ThemePref = (typeof THEMES)[number]
-export const ACCENTS = ['lagoon', 'sunset', 'violet', 'forest'] as const
+export const ACCENTS = ['default', 'lagoon', 'sunset', 'violet', 'forest'] as const
 export type Accent = (typeof ACCENTS)[number]
 
 export type Prefs = {
   /** "" = follow the device language */
   language: '' | Locale
-  /** "" = follow the system theme */
+  /** Appearance mode, independent of the selected palette. */
   theme: ThemePref
   accent: Accent
   targetHours: number
@@ -23,8 +22,8 @@ export const DEFAULT_TARGET_HOURS = 16
 
 export const DEFAULT_PREFS: Prefs = {
   language: '',
-  theme: '',
-  accent: 'lagoon',
+  theme: 'system',
+  accent: 'default',
   targetHours: DEFAULT_TARGET_HOURS,
   eatingWindowHours: 0,
 }
@@ -36,8 +35,14 @@ function sanitize(raw: Partial<Record<keyof Prefs, unknown>> | null | undefined)
   const r = raw ?? {}
   return {
     language: LOCALES.includes(r.language as Locale) ? (r.language as Locale) : '',
-    theme: THEMES.includes(r.theme as ThemePref) ? (r.theme as ThemePref) : '',
-    accent: ACCENTS.includes(r.accent as Accent) ? (r.accent as Accent) : 'lagoon',
+    theme: THEMES.includes(r.theme as ThemePref) ? (r.theme as ThemePref) : 'system',
+    // Legacy empty mode selected the monochrome palette, regardless of accent.
+    accent:
+      r.theme === ''
+        ? 'default'
+        : ACCENTS.includes(r.accent as Accent)
+          ? (r.accent as Accent)
+          : 'default',
     targetHours: Number(r.targetHours) > 0 ? Number(r.targetHours) : DEFAULT_TARGET_HOURS,
     eatingWindowHours: Number(r.eatingWindowHours) > 0 ? Number(r.eatingWindowHours) : 0,
   }
@@ -103,7 +108,7 @@ export async function updatePrefs(patch: Partial<Prefs>) {
   const user = currentUser()
   if (!user) return
   try {
-    await users().update(user.id, patch)
+    await users().update(user.id, { ...patch, theme: prefs.theme, accent: prefs.accent })
     syncResolvedLocale()
   } catch (err) {
     emit(previous)
@@ -112,10 +117,6 @@ export async function updatePrefs(patch: Partial<Prefs>) {
 }
 
 // --- theme -------------------------------------------------------------------
-
-export function isMonochromeTheme(theme: ThemePref) {
-  return theme === ''
-}
 
 export function resolveTheme(theme: ThemePref) {
   if (theme === 'light' || theme === 'dark') return theme
@@ -127,7 +128,7 @@ function applyToDocument() {
   const root = document.documentElement
   const dark = resolveTheme(prefs.theme) === 'dark'
   root.classList.toggle('dark', dark)
-  root.dataset.theme = prefs.theme || 'default'
+  root.dataset.theme = prefs.accent
   root.dataset.accent = prefs.accent
   root.lang = resolveLocale(prefs.language)
   // Tint the browser/OS chrome to match the background.

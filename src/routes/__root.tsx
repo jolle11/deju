@@ -39,7 +39,7 @@ export const Route = createRootRoute({
 })
 
 /** Applies the cached theme before first paint so there is no light/dark flash. */
-const THEME_BOOT_SCRIPT = `try{var p=JSON.parse(localStorage.getItem(${JSON.stringify(STORAGE_KEY)})||'{}');var t=p.theme||'';var d=t==='dark'||t==='light'?t==='dark':matchMedia('(prefers-color-scheme: dark)').matches;var r=document.documentElement;r.classList.toggle('dark',d);r.dataset.theme=t||'default';r.dataset.accent=p.accent||'lagoon';if(p.language)r.lang=p.language}catch(e){}`
+const THEME_BOOT_SCRIPT = `try{var p=JSON.parse(localStorage.getItem(${JSON.stringify(STORAGE_KEY)})||'{}');var t=p.theme||'system';var d=t==='dark'||t==='light'?t==='dark':matchMedia('(prefers-color-scheme: dark)').matches;var r=document.documentElement;r.classList.toggle('dark',d);var a=p.theme===''?'default':['default','lagoon','sunset','violet','forest'].includes(p.accent)?p.accent:'default';r.dataset.theme=a;r.dataset.accent=a;if(p.language)r.lang=p.language}catch(e){}`
 
 function useServiceWorker() {
   useEffect(() => {
