@@ -2,6 +2,7 @@ import { createFileRoute, redirect } from '@tanstack/react-router'
 import { useEffect, useState } from 'react'
 import { BottomNav } from '#/components/bottom-nav'
 import { FastDialog } from '#/components/fast-dialog'
+import { onCollectionChange } from '#/lib/live'
 import { currentUser, currentUserId, type Fast, fasts, isLoggedIn } from '#/lib/pb'
 import { formatDate, formatDuration } from '#/lib/time'
 import { type Zone, zoneAt } from '#/lib/zones'
@@ -30,10 +31,7 @@ function useLatestFast() {
 
     load()
     // Keep every open device in sync.
-    const unsubscribe = fasts().subscribe('*', load)
-    return () => {
-      unsubscribe.then((fn) => fn())
-    }
+    return onCollectionChange('fasts', load)
   }, [])
 
   const active = latest && !latest.endedAt ? latest : null

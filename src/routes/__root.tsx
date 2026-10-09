@@ -19,6 +19,8 @@ export const Route = createRootRoute({
         title: 'Deju',
       },
       { name: 'theme-color', content: '#0a1418' },
+      { name: 'mobile-web-app-capable', content: 'yes' },
+      // Still needed for standalone mode on older iOS versions.
       { name: 'apple-mobile-web-app-capable', content: 'yes' },
       { name: 'apple-mobile-web-app-status-bar-style', content: 'black-translucent' },
     ],

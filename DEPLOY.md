@@ -8,6 +8,8 @@ Un proyecto de Railway con tres servicios desde este repo:
 | `pocketbase` | `/pocketbase` | Dockerfile. **Volumen montado en `/pb/pb_data`**. Dominio público (el navegador habla con él). Puerto 8090. |
 | `notif-worker` | `/worker` | Dockerfile. Sin dominio. |
 
+> **PocketBase debe tener exactamente 1 réplica** (Settings → Deploy → Replicas, y sin multi-región). Guarda los clientes realtime en memoria y usa SQLite: con varias réplicas el realtime falla con `400 Invalid realtime client` y cada réplica puede acabar con datos distintos. `pocketbase/railway.json` ya fija `numReplicas: 1`.
+
 Configura los "Watch paths" de cada servicio (`/pocketbase/**`, `/worker/**`, y el resto para frontend) para no redeployar todo en cada push.
 
 ## Variables

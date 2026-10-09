@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import { BottomNav } from '#/components/bottom-nav'
 import { PushToggle } from '#/components/push-toggle'
 import { WeightChart } from '#/components/weight-chart'
+import { onCollectionChange } from '#/lib/live'
 import { currentUser, currentUserId, isLoggedIn, pb, users, type Weight, weights } from '#/lib/pb'
 import { formatDate, fromLocalInput, toLocalInput } from '#/lib/time'
 
@@ -105,10 +106,7 @@ function useWeights() {
         .catch(() => setItems([]))
 
     load()
-    const unsubscribe = weights().subscribe('*', load)
-    return () => {
-      unsubscribe.then((fn) => fn())
-    }
+    return onCollectionChange('weights', load)
   }, [])
 
   return items

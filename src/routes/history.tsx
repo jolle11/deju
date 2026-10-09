@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import { BottomNav } from '#/components/bottom-nav'
 import { FastDialog, RATINGS } from '#/components/fast-dialog'
 import { MonthCalendar, WeeklyChart } from '#/components/stats'
+import { onCollectionChange } from '#/lib/live'
 import { type Fast, fasts, isLoggedIn } from '#/lib/pb'
 import { computeStats, durationMs, isCompleted } from '#/lib/stats'
 import { formatDate, formatHours } from '#/lib/time'
@@ -25,10 +26,7 @@ function usePastFasts() {
         .catch(() => setItems([]))
 
     load()
-    const unsubscribe = fasts().subscribe('*', load)
-    return () => {
-      unsubscribe.then((fn) => fn())
-    }
+    return onCollectionChange('fasts', load)
   }, [])
 
   return items
