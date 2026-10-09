@@ -25,9 +25,7 @@ export function QuickPrefs({ className = '' }: { className?: string }) {
     updatePrefs(patch).catch(() => {})
   }
 
-  const next: ThemePref = THEMES[(THEMES.indexOf(prefs.theme) + 1) % THEMES.length]
   const ThemeIcon = THEME_ICON[prefs.theme]
-  const themeLabel = `${t('settings.theme')}: ${t(`settings.theme.${THEME_LABEL[prefs.theme]}`)}`
 
   return (
     <div className={`flex items-center gap-2 ${className}`}>
@@ -47,15 +45,21 @@ export function QuickPrefs({ className = '' }: { className?: string }) {
           ))}
         </select>
       </label>
-      <button
-        type="button"
-        onClick={() => save({ theme: next })}
-        aria-label={themeLabel}
-        title={themeLabel}
-        className="flex size-9 items-center justify-center rounded-full border border-input text-muted-foreground hover:bg-muted/60 hover:text-foreground"
-      >
-        <ThemeIcon className="size-4" aria-hidden="true" />
-      </button>
+      <label className="relative flex items-center rounded-full border border-input text-muted-foreground hover:bg-muted/60">
+        <ThemeIcon className="pointer-events-none absolute left-2.5 size-4" aria-hidden="true" />
+        <select
+          aria-label={t('settings.theme')}
+          value={prefs.theme}
+          onChange={(e) => save({ theme: e.target.value as ThemePref })}
+          className="cursor-pointer appearance-none bg-transparent py-1.5 pr-3 pl-8 text-sm font-bold text-foreground outline-none"
+        >
+          {THEMES.map((theme) => (
+            <option key={theme} value={theme}>
+              {t(`settings.theme.${THEME_LABEL[theme]}`)}
+            </option>
+          ))}
+        </select>
+      </label>
     </div>
   )
 }
