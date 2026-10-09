@@ -39,7 +39,7 @@ function Login() {
   }
 
   return (
-    <main className="mx-auto flex min-h-dvh max-w-sm flex-col justify-center gap-6 p-6">
+    <main className="mx-auto flex min-h-dvh max-w-sm flex-col justify-center gap-6 px-6 pt-[max(1.5rem,env(safe-area-inset-top))] pb-[max(1.5rem,env(safe-area-inset-bottom))]">
       <h1 className="text-3xl font-bold">Deju</h1>
       <form onSubmit={onSubmit} className="flex flex-col gap-3">
         <input

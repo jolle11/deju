@@ -96,7 +96,10 @@ export function FastDialog({
       onClose={onClose}
       className="m-auto mb-0 w-full max-w-md rounded-t-3xl bg-card p-0 text-card-foreground backdrop:bg-black/60 sm:mb-auto sm:rounded-3xl"
     >
-      <form onSubmit={submit} className="flex flex-col gap-4 p-6">
+      <form
+        onSubmit={submit}
+        className="flex flex-col gap-4 px-6 pt-6 pb-[max(1.5rem,env(safe-area-inset-bottom))]"
+      >
         <h2 className="font-display text-2xl font-extrabold tracking-tight">{TITLES[mode]}</h2>
 
         {showStart && (

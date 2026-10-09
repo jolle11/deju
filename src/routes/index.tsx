@@ -1,5 +1,6 @@
-import { createFileRoute, Link, redirect, useNavigate } from '@tanstack/react-router'
+import { createFileRoute, redirect, useNavigate } from '@tanstack/react-router'
 import { useEffect, useState } from 'react'
+import { BottomNav } from '#/components/bottom-nav'
 import { FastDialog } from '#/components/fast-dialog'
 import { currentUserId, type Fast, fasts, isLoggedIn, pb } from '#/lib/pb'
 import { disablePush, enablePush, getPushSubscription, pushSupported } from '#/lib/push'
@@ -77,17 +78,16 @@ function Home() {
   const { zone, next } = zoneAt(elapsed)
 
   return (
-    <main className="mx-auto flex min-h-dvh max-w-md flex-col items-center p-6">
+    <main className="mx-auto flex min-h-dvh max-w-md flex-col items-center px-6 pt-[max(1.5rem,env(safe-area-inset-top))] pb-[calc(6rem+env(safe-area-inset-bottom))]">
       <header className="flex w-full items-center justify-between">
         <h1 className="font-display text-3xl font-extrabold tracking-tight">Deju</h1>
-        <nav className="flex items-center gap-4 text-sm font-semibold">
-          <Link to="/history" className="text-foreground no-underline">
-            Historial
-          </Link>
-          <button type="button" onClick={logout} className="text-muted-foreground">
-            Salir
-          </button>
-        </nav>
+        <button
+          type="button"
+          onClick={logout}
+          className="text-sm font-semibold text-muted-foreground"
+        >
+          Salir
+        </button>
       </header>
 
       <section className="flex w-full flex-1 flex-col items-center justify-center gap-10 py-8">
@@ -191,6 +191,7 @@ function Home() {
       </section>
 
       <PushToggle />
+      <BottomNav />
 
       {fast && dialog && (
         <FastDialog

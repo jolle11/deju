@@ -1,5 +1,6 @@
-import { createFileRoute, Link, redirect } from '@tanstack/react-router'
+import { createFileRoute, redirect } from '@tanstack/react-router'
 import { useEffect, useState } from 'react'
+import { BottomNav } from '#/components/bottom-nav'
 import { FastDialog } from '#/components/fast-dialog'
 import { MonthCalendar, WeeklyChart } from '#/components/stats'
 import { type Fast, fasts, isLoggedIn } from '#/lib/pb'
@@ -42,12 +43,9 @@ function History() {
   const stats = computeStats(items)
 
   return (
-    <main className="mx-auto flex min-h-dvh max-w-md flex-col gap-6 p-6">
+    <main className="mx-auto flex min-h-dvh max-w-md flex-col gap-6 px-6 pt-[max(1.5rem,env(safe-area-inset-top))] pb-[calc(6rem+env(safe-area-inset-bottom))]">
       <header className="flex w-full items-center justify-between">
         <h1 className="font-display text-3xl font-extrabold tracking-tight">Historial</h1>
-        <Link to="/" className="text-sm font-semibold text-foreground no-underline">
-          ← Volver
-        </Link>
       </header>
 
       {items.length === 0 ? (
@@ -109,6 +107,8 @@ function History() {
           </ul>
         </>
       )}
+
+      <BottomNav />
 
       {editing && (
         <FastDialog
