@@ -56,9 +56,7 @@ async function claim(fastId: string, kind: string) {
 async function tick() {
   await ensureAuth()
   const now = new Date()
-  const active = await pb
-    .collection('fasts')
-    .getFullList<Fast>({ filter: 'endedAt = ""' })
+  const active = await pb.collection('fasts').getFullList<Fast>({ filter: 'endedAt = ""' })
 
   for (const fast of active) {
     const reached = reachedMilestones(new Date(fast.startedAt), fast.targetHours, now)

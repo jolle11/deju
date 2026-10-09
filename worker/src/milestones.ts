@@ -3,14 +3,12 @@ export type Milestone = { kind: string; hours: number; title: string; body: stri
 const INTERMEDIATE_HOURS = [12, 16, 18, 24, 36, 48, 72]
 
 export function milestonesFor(targetHours: number): Milestone[] {
-  const list: Milestone[] = INTERMEDIATE_HOURS.filter((h) => h < targetHours).map(
-    (h) => ({
-      kind: `${h}h`,
-      hours: h,
-      title: `¡${h} horas de ayuno!`,
-      body: `Llevas ${h}h. Te quedan ${targetHours - h}h para tu objetivo.`,
-    }),
-  )
+  const list: Milestone[] = INTERMEDIATE_HOURS.filter((h) => h < targetHours).map((h) => ({
+    kind: `${h}h`,
+    hours: h,
+    title: `¡${h} horas de ayuno!`,
+    body: `Llevas ${h}h. Te quedan ${targetHours - h}h para tu objetivo.`,
+  }))
   list.push({
     kind: 'goal',
     hours: targetHours,

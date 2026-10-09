@@ -1,5 +1,5 @@
-import { useState } from 'react'
 import { createFileRoute, redirect, useNavigate } from '@tanstack/react-router'
+import { useState } from 'react'
 import { isLoggedIn, pb } from '#/lib/pb'
 
 export const Route = createFileRoute('/login')({
@@ -23,9 +23,7 @@ function Login() {
     setError(null)
     try {
       if (mode === 'signup') {
-        await pb
-          .collection('users')
-          .create({ email, password, passwordConfirm: password })
+        await pb.collection('users').create({ email, password, passwordConfirm: password })
       }
       await pb.collection('users').authWithPassword(email, password)
       navigate({ to: '/' })
