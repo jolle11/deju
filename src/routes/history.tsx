@@ -2,6 +2,7 @@ import { createFileRoute, redirect } from '@tanstack/react-router'
 import { useEffect, useState } from 'react'
 import { AppShell } from '#/components/app-shell'
 import { FastDialog, RATINGS } from '#/components/fast-dialog'
+import { Delayed, Skeleton } from '#/components/skeleton'
 import { MonthCalendar, WeeklyChart } from '#/components/stats'
 import { onCollectionChange } from '#/lib/live'
 import { type Fast, fasts, isLoggedIn } from '#/lib/pb'
@@ -39,7 +40,13 @@ function History() {
   const items = usePastFasts()
   const [editing, setEditing] = useState<Fast | null>(null)
 
-  if (!items) return <AppShell title={t('history.title')}>{null}</AppShell>
+  if (!items) {
+    return (
+      <AppShell title={t('history.title')}>
+        <HistorySkeleton />
+      </AppShell>
+    )
+  }
 
   const stats = computeStats(items)
 
@@ -122,6 +129,28 @@ function History() {
         />
       )}
     </AppShell>
+  )
+}
+
+function HistorySkeleton() {
+  return (
+    <Delayed>
+      <div className="grid gap-6 lg:grid-cols-2 lg:items-start">
+        <div className="grid grid-cols-3 gap-2">
+          {Array.from({ length: 6 }, (_, i) => (
+            // biome-ignore lint/suspicious/noArrayIndexKey: static placeholders
+            <Skeleton key={i} className="h-[4.75rem] rounded-2xl" />
+          ))}
+        </div>
+        <div className="flex flex-col gap-2">
+          <Skeleton className="mb-1 h-7 w-28" />
+          {Array.from({ length: 5 }, (_, i) => (
+            // biome-ignore lint/suspicious/noArrayIndexKey: static placeholders
+            <Skeleton key={i} className="h-[4.25rem] rounded-2xl" />
+          ))}
+        </div>
+      </div>
+    </Delayed>
   )
 }
 

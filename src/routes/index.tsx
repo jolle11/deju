@@ -3,6 +3,7 @@ import { ChevronDown } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { AppShell } from '#/components/app-shell'
 import { FastDialog } from '#/components/fast-dialog'
+import { Delayed, Skeleton } from '#/components/skeleton'
 import { onCollectionChange } from '#/lib/live'
 import { currentUser, currentUserId, type Fast, fasts, isLoggedIn } from '#/lib/pb'
 import { type Translate, useI18n, usePrefs } from '#/lib/preferences'
@@ -74,7 +75,7 @@ function Home() {
     })
   }
 
-  if (loading) return <AppShell>{null}</AppShell>
+  if (loading) return <HomeSkeleton />
 
   const elapsed = fast ? now - new Date(fast.startedAt).getTime() : 0
   const goalMs = fast ? fast.targetHours * 3_600_000 : 0
@@ -153,6 +154,28 @@ function Home() {
           onSave={(patch) => fasts().update(fast.id, patch)}
         />
       )}
+    </AppShell>
+  )
+}
+
+function HomeSkeleton() {
+  return (
+    <AppShell>
+      <Delayed>
+        <div className="flex flex-1 flex-col items-center justify-center gap-6 lg:gap-8">
+          <ProgressRing progress={0}>
+            <Skeleton className="h-14 w-40 lg:h-16 lg:w-48" />
+            <Skeleton className="h-4 w-24" />
+          </ProgressRing>
+          <div className="flex gap-3">
+            {Array.from({ length: 5 }, (_, i) => (
+              // biome-ignore lint/suspicious/noArrayIndexKey: static placeholders
+              <Skeleton key={i} className="size-9 rounded-full" />
+            ))}
+          </div>
+          <Skeleton className="h-15 w-full max-w-sm rounded-full" />
+        </div>
+      </Delayed>
     </AppShell>
   )
 }
