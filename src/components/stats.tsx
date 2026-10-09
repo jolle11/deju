@@ -87,7 +87,7 @@ export function WeeklyChart({
 }
 
 const LEVEL_CLASS: Record<DayLevel, string> = {
-  goal: 'bg-[var(--lagoon)] text-[var(--lagoon-foreground,#000)]',
+  goal: 'bg-[var(--lagoon)] text-[var(--lagoon-foreground)]',
   min: 'bg-[var(--lagoon)]/25 text-foreground ring-1 ring-inset ring-[var(--lagoon)]/60',
 }
 
