@@ -1,4 +1,4 @@
-import { createFileRoute, redirect, useNavigate } from '@tanstack/react-router'
+import { createFileRoute, Link, redirect, useNavigate } from '@tanstack/react-router'
 import { useState } from 'react'
 import { QuickPrefs } from '#/components/quick-prefs'
 import { isLoggedIn, pb } from '#/lib/pb'
@@ -8,13 +8,16 @@ export const Route = createFileRoute('/login')({
   beforeLoad: () => {
     if (isLoggedIn()) throw redirect({ to: '/' })
   },
+  validateSearch: (search: Record<string, unknown>): { mode?: 'signup' } =>
+    search.mode === 'signup' ? { mode: 'signup' } : {},
   component: Login,
 })
 
 function Login() {
   const { t } = useI18n()
   const navigate = useNavigate()
-  const [mode, setMode] = useState<'login' | 'signup'>('login')
+  const search = Route.useSearch()
+  const [mode, setMode] = useState<'login' | 'signup'>(search.mode ?? 'login')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -41,7 +44,9 @@ function Login() {
     <main className="mx-auto flex min-h-dvh max-w-sm flex-col justify-center gap-6 px-6 pt-[calc(1.5rem+env(safe-area-inset-top))] pb-[max(1.5rem,env(safe-area-inset-bottom))]">
       <QuickPrefs className="absolute top-[calc(1rem+env(safe-area-inset-top))] right-4" />
       <div>
-        <h1 className="font-display text-4xl font-extrabold tracking-tight">{t('app.name')}</h1>
+        <Link to="/welcome" className="no-underline !text-foreground">
+          <h1 className="font-display text-4xl font-extrabold tracking-tight">{t('app.name')}</h1>
+        </Link>
         <p className="mt-1 text-muted-foreground">{t('login.tagline')}</p>
       </div>
       <form onSubmit={onSubmit} className="flex flex-col gap-3">

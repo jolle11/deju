@@ -11,7 +11,7 @@ import { capitalize, formatDate, formatHours } from '#/lib/time'
 
 export const Route = createFileRoute('/history')({
   beforeLoad: () => {
-    if (!isLoggedIn()) throw redirect({ to: '/login' })
+    if (!isLoggedIn()) throw redirect({ to: '/welcome' })
   },
   component: History,
 })

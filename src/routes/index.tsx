@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { AppShell } from '#/components/app-shell'
 import { FastDialog, RATINGS } from '#/components/fast-dialog'
 import { onCollectionChange } from '#/lib/live'
-import { currentUserId, type Fast, fasts, isLoggedIn } from '#/lib/pb'
+import { currentUser, currentUserId, type Fast, fasts, isLoggedIn } from '#/lib/pb'
 import { type Translate, useI18n, usePrefs } from '#/lib/preferences'
 import { durationMs, isCompleted } from '#/lib/stats'
 import { capitalize, formatDate, formatDuration, formatHours } from '#/lib/time'
@@ -12,7 +12,9 @@ import { type Zone, zoneAt } from '#/lib/zones'
 
 export const Route = createFileRoute('/')({
   beforeLoad: () => {
-    if (!isLoggedIn()) throw redirect({ to: '/login' })
+    if (!isLoggedIn()) throw redirect({ to: '/welcome' })
+    // First visit: ask for the fasting goal (0 = never chosen).
+    if (!currentUser()?.targetHours) throw redirect({ to: '/onboarding' })
   },
   component: Home,
 })
@@ -81,36 +83,44 @@ function Home() {
 
   return (
     <AppShell>
-      <div className="grid flex-1 items-center gap-10 lg:grid-cols-[minmax(0,1fr)_22rem] lg:items-start lg:gap-12">
+      <div className="flex flex-1 flex-col gap-10 lg:grid lg:items-center lg:grid-cols-[minmax(0,1fr)_22rem] lg:items-start lg:gap-12">
         {/* Timer column */}
-        <section className="flex flex-col items-center justify-center gap-8 lg:min-h-[calc(100dvh-5rem)]">
-          <ProgressRing progress={progress} color={fast ? zone.color : undefined}>
-            {fast ? (
-              <>
-                <span className="text-xs font-bold uppercase tracking-[0.2em] text-muted-foreground">
-                  {progress >= 1
-                    ? t('home.goalReached')
-                    : t('home.fastOf', { h: fast.targetHours })}
-                </span>
-                <span className="font-display text-5xl font-extrabold tracking-tight tabular-nums lg:text-6xl">
-                  {formatDuration(elapsed)}
-                </span>
-                <span className="text-sm font-semibold text-muted-foreground tabular-nums">
-                  {progress >= 1
-                    ? `+${formatDuration(elapsed - goalMs)}`
-                    : t('home.remaining', { t: formatDuration(goalMs - elapsed) })}
-                </span>
-              </>
-            ) : (
-              <IdleStatus
-                t={t}
-                lastEnded={lastEnded}
-                targetHours={targetHours}
-                eatingWindowHours={eatingWindowHours}
-                now={now}
-              />
-            )}
-          </ProgressRing>
+        <section className="flex flex-1 flex-col items-center gap-6 lg:min-h-[calc(100dvh-5rem)] lg:justify-center lg:gap-8">
+          <div className="flex flex-1 items-center lg:flex-none">
+            <ProgressRing progress={progress} color={fast ? zone.color : undefined}>
+              {fast ? (
+                <>
+                  <span className="text-xs font-bold uppercase tracking-[0.2em] text-muted-foreground">
+                    {progress >= 1
+                      ? t('home.goalReached')
+                      : t('home.fastOf', { h: fast.targetHours })}
+                  </span>
+                  <span className="font-display text-5xl font-extrabold tracking-tight tabular-nums lg:text-6xl">
+                    {formatDuration(elapsed)}
+                  </span>
+                  <span className="text-sm font-semibold text-muted-foreground tabular-nums">
+                    {progress >= 1
+                      ? `+${formatDuration(elapsed - goalMs)}`
+                      : t('home.remaining', { t: formatDuration(goalMs - elapsed) })}
+                  </span>
+                </>
+              ) : (
+                <IdleStatus
+                  t={t}
+                  lastEnded={lastEnded}
+                  targetHours={targetHours}
+                  eatingWindowHours={eatingWindowHours}
+                  now={now}
+                />
+              )}
+            </ProgressRing>
+          </div>
+
+          {fast && (
+            <div className="w-full lg:hidden">
+              <ZoneCard t={t} zone={zone} next={next} elapsed={elapsed} />
+            </div>
+          )}
 
           <div className="flex w-full max-w-sm flex-col items-center gap-3">
             {fast ? (
@@ -132,27 +142,19 @@ function Home() {
                 </button>
               </>
             ) : (
-              <>
-                <button
-                  type="button"
-                  onClick={start}
-                  className="w-full rounded-full bg-primary px-6 py-4 text-lg font-extrabold text-primary-foreground"
-                >
-                  {t('home.start', { h: targetHours })}
-                </button>
-                <Link
-                  to="/settings"
-                  className="text-sm font-semibold text-muted-foreground underline"
-                >
-                  {t('home.changeGoal')}
-                </Link>
-              </>
+              <button
+                type="button"
+                onClick={start}
+                className="w-full rounded-full bg-primary px-6 py-4 text-lg font-extrabold text-primary-foreground"
+              >
+                {t('home.start', { h: targetHours })}
+              </button>
             )}
           </div>
         </section>
 
-        {/* Side column: below the timer on mobile, beside it on desktop */}
-        <aside className="flex flex-col gap-4 lg:pt-4">
+        {/* Desktop side column */}
+        <aside className="hidden flex-col gap-4 lg:flex lg:pt-4">
           {fast && <ZoneCard t={t} zone={zone} next={next} elapsed={elapsed} />}
           <RecentFasts t={t} locale={locale} items={past} />
         </aside>

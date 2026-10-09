@@ -20,7 +20,7 @@ export function AppShell({ title, children }: { title?: string; children: ReactN
   return (
     <div className="lg:flex lg:min-h-dvh">
       <SideNav />
-      <main className="mx-auto flex min-h-dvh w-full max-w-md flex-col gap-6 px-6 pt-[calc(1.5rem+env(safe-area-inset-top))] pb-[calc(5rem+env(safe-area-inset-bottom))] lg:max-w-6xl lg:px-12 lg:pt-10 lg:pb-10">
+      <main className="mx-auto flex min-h-dvh w-full max-w-md flex-col gap-6 px-6 pt-[calc(1.5rem+env(safe-area-inset-top))] pb-[calc(4.5rem+max(0.25rem,calc(env(safe-area-inset-bottom)-1.5rem)))] lg:max-w-6xl lg:px-12 lg:pt-10 lg:pb-10">
         <header className="flex items-center justify-between gap-4">
           {title ? (
             <h1 className="font-display text-3xl font-extrabold tracking-tight lg:text-4xl">
