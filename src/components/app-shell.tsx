@@ -20,7 +20,7 @@ export function AppShell({ title, children }: { title?: string; children: ReactN
   return (
     <div className="lg:flex lg:min-h-dvh">
       <SideNav />
-      <main className="mx-auto flex min-h-dvh w-full max-w-md flex-col gap-6 px-6 pt-[calc(1.5rem+env(safe-area-inset-top))] pb-[calc(6rem+env(safe-area-inset-bottom))] lg:max-w-6xl lg:px-12 lg:pt-10 lg:pb-10">
+      <main className="mx-auto flex min-h-dvh w-full max-w-md flex-col gap-6 px-6 pt-[calc(1.5rem+env(safe-area-inset-top))] pb-[calc(5rem+env(safe-area-inset-bottom))] lg:max-w-6xl lg:px-12 lg:pt-10 lg:pb-10">
         <header className="flex items-center justify-between gap-4">
           {title ? (
             <h1 className="font-display text-3xl font-extrabold tracking-tight lg:text-4xl">
@@ -72,14 +72,14 @@ function SideNav() {
 function BottomNav() {
   const { t } = useI18n()
   return (
-    <nav className="fixed inset-x-0 bottom-0 z-10 border-t border-input bg-background/85 pb-[env(safe-area-inset-bottom)] backdrop-blur-md lg:hidden">
+    <nav className="fixed inset-x-0 bottom-0 z-10 border-t border-input bg-background/85 pb-[max(0.25rem,calc(env(safe-area-inset-bottom)-1rem))] backdrop-blur-md lg:hidden">
       <ul className="mx-auto flex max-w-md">
         {TABS.map(({ to, label, Icon }) => (
           <li key={to} className="flex-1">
             <Link
               to={to}
               activeOptions={{ exact: true }}
-              className="flex flex-col items-center gap-1 py-3 text-xs font-bold no-underline !text-muted-foreground data-[status=active]:!text-[var(--lagoon)]"
+              className="flex flex-col items-center gap-1 pt-2 pb-1 text-xs font-bold no-underline !text-muted-foreground data-[status=active]:!text-[var(--lagoon)]"
             >
               <Icon className="size-6" strokeWidth={2.25} aria-hidden="true" />
               {t(label)}
