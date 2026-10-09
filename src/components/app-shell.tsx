@@ -72,7 +72,7 @@ function SideNav() {
 function BottomNav() {
   const { t } = useI18n()
   return (
-    <nav className="fixed inset-x-0 bottom-0 z-10 border-t border-input bg-background/85 pb-[max(0.25rem,calc(env(safe-area-inset-bottom)-1rem))] backdrop-blur-md lg:hidden">
+    <nav className="fixed inset-x-0 bottom-0 z-10 border-t border-input bg-background/85 pb-[max(0.25rem,calc(env(safe-area-inset-bottom)-1.5rem))] backdrop-blur-md lg:hidden">
       <ul className="mx-auto flex max-w-md">
         {TABS.map(({ to, label, Icon }) => (
           <li key={to} className="flex-1">
