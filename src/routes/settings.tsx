@@ -16,6 +16,7 @@ import {
   useI18n,
   usePrefs,
 } from '#/lib/preferences'
+import { pushRelevant } from '#/lib/push'
 
 const WINDOW_OPTIONS = [0, 4, 6, 8, 10, 12]
 
@@ -100,9 +101,11 @@ function Settings() {
             />
           </Card>
 
-          <Card>
-            <PushToggle />
-          </Card>
+          {pushRelevant() && (
+            <Card>
+              <PushToggle />
+            </Card>
+          )}
 
           <DataSection />
         </div>

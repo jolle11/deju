@@ -14,6 +14,19 @@ export function pushSupported() {
   )
 }
 
+/**
+ * Reminders are only delivered to phones, tablets and installed apps, so a
+ * desktop browser tab never gets the setting.
+ */
+export function pushRelevant() {
+  if (typeof window === 'undefined') return false
+  return (
+    window.matchMedia('(pointer: coarse)').matches ||
+    window.matchMedia('(display-mode: standalone)').matches ||
+    ('standalone' in navigator && Boolean(navigator.standalone))
+  )
+}
+
 function urlBase64ToUint8Array(base64: string) {
   const padding = '='.repeat((4 - (base64.length % 4)) % 4)
   const raw = atob((base64 + padding).replace(/-/g, '+').replace(/_/g, '/'))
