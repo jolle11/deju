@@ -1,4 +1,5 @@
 import { createFileRoute, Link, redirect } from '@tanstack/react-router'
+import { ChevronDown } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { AppShell } from '#/components/app-shell'
 import { FastDialog, RATINGS } from '#/components/fast-dialog'
@@ -80,10 +81,6 @@ function Home() {
 
   return (
     <AppShell>
-      <header className="flex items-center justify-between lg:hidden">
-        <span className="font-display text-3xl font-extrabold tracking-tight">{t('app.name')}</span>
-      </header>
-
       <div className="grid flex-1 items-center gap-10 lg:grid-cols-[minmax(0,1fr)_22rem] lg:items-start lg:gap-12">
         {/* Timer column */}
         <section className="flex flex-col items-center justify-center gap-8 lg:min-h-[calc(100dvh-5rem)]">
@@ -220,13 +217,23 @@ function ZoneCard({
   next?: Zone
   elapsed: number
 }) {
+  const [open, setOpen] = useState(false)
   return (
     <div className="w-full rounded-2xl border border-input px-4 py-3">
-      <div className="flex items-center gap-2">
+      <button
+        type="button"
+        aria-expanded={open}
+        onClick={() => setOpen((o) => !o)}
+        className="flex w-full items-center gap-2 text-left"
+      >
         <span className="size-3 rounded-full" style={{ backgroundColor: zone.color }} />
-        <span className="font-display text-lg font-extrabold">{t(`zone.${zone.id}`)}</span>
-      </div>
-      <p className="mt-1 text-sm text-muted-foreground">{t(`zone.${zone.id}.desc`)}</p>
+        <span className="flex-1 font-display text-lg font-extrabold">{t(`zone.${zone.id}`)}</span>
+        <ChevronDown
+          className={`size-4 text-muted-foreground transition-transform ${open ? 'rotate-180' : ''}`}
+          aria-hidden="true"
+        />
+      </button>
+      {open && <p className="mt-1 text-sm text-muted-foreground">{t(`zone.${zone.id}.desc`)}</p>}
       {next && (
         <p className="mt-2 text-xs font-bold uppercase tracking-wider text-muted-foreground tabular-nums">
           {t('home.nextZoneIn', {

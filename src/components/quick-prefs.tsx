@@ -153,12 +153,12 @@ function Dropdown<T extends string>({
             show()
           }
         }}
-        className={`flex items-center gap-1.5 rounded-full border border-input py-1.5 pr-2.5 pl-2.5 text-sm font-bold text-foreground transition-colors hover:bg-muted/60 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none ${open ? 'bg-muted/60' : ''}`}
+        className={`flex items-center gap-1.5 rounded-full border border-input p-2 text-sm lg:py-1.5 lg:px-2.5 font-bold text-foreground transition-colors hover:bg-muted/60 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none ${open ? 'bg-muted/60' : ''}`}
       >
         <TriggerIcon className="size-4 text-muted-foreground" />
-        <span>{current.label}</span>
+        <span className="hidden lg:inline">{current.label}</span>
         <ChevronDown
-          className={`size-3.5 text-muted-foreground transition-transform ${open ? 'rotate-180' : ''}`}
+          className={`hidden size-3.5 text-muted-foreground transition-transform lg:block ${open ? 'rotate-180' : ''}`}
           aria-hidden="true"
         />
       </button>
