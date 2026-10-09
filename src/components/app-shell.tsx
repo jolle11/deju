@@ -1,7 +1,8 @@
-import { Link } from '@tanstack/react-router'
-import { History, Settings, Timer } from 'lucide-react'
+import { Link, useNavigate } from '@tanstack/react-router'
+import { History, LogOut, Settings, Timer } from 'lucide-react'
 import type { ReactNode } from 'react'
 import type { MessageKey } from '#/lib/messages'
+import { pb } from '#/lib/pb'
 import { useI18n } from '#/lib/preferences'
 import { QuickPrefs } from './quick-prefs'
 
@@ -43,6 +44,7 @@ export function AppShell({ title, children }: { title?: string; children: ReactN
 
 function SideNav() {
   const { t } = useI18n()
+  const navigate = useNavigate()
   return (
     <aside className="sticky top-0 hidden h-dvh w-64 shrink-0 flex-col gap-8 border-r border-input px-5 py-8 lg:flex">
       <span className="px-3 font-display text-3xl font-extrabold tracking-tight">
@@ -64,6 +66,17 @@ function SideNav() {
           ))}
         </ul>
       </nav>
+      <button
+        type="button"
+        onClick={() => {
+          pb.authStore.clear()
+          navigate({ to: '/welcome' })
+        }}
+        className="mt-auto flex items-center gap-3 rounded-xl px-3 py-2.5 text-left font-bold text-red-500 hover:bg-muted/60 dark:text-red-400"
+      >
+        <LogOut className="size-5" strokeWidth={2.25} aria-hidden="true" />
+        {t('settings.logout')}
+      </button>
     </aside>
   )
 }
