@@ -28,7 +28,7 @@ export function AppShell({ title, children }: { title?: string; children: ReactN
     <div className="lg:flex lg:min-h-dvh" {...swipe}>
       <SideNav />
       <main
-        className={`${enter} mx-auto flex min-h-dvh w-full max-w-md flex-col gap-6 px-6 pt-[calc(1.5rem+env(safe-area-inset-top))] pb-[calc(5.25rem+max(0.25rem,calc(env(safe-area-inset-bottom)-1.5rem)))] lg:max-w-6xl lg:px-12 lg:pt-10 lg:pb-10`}
+        className={`${enter} mx-auto flex min-h-dvh w-full max-w-md flex-col gap-6 px-6 pt-[calc(1.5rem+env(safe-area-inset-top))] pb-[calc(5rem+max(0.25rem,calc(env(safe-area-inset-bottom)-1.5rem)))] lg:max-w-6xl lg:px-12 lg:pt-10 lg:pb-10`}
       >
         <header className="flex items-center justify-between gap-4">
           {title ? (
@@ -247,7 +247,7 @@ function BottomNav() {
             <Link
               to={to}
               activeOptions={{ exact: true }}
-              className="group/tab flex flex-col items-center gap-1 pt-2 pb-2.5 text-xs font-bold no-underline !text-muted-foreground data-[status=active]:!text-[var(--lagoon)]"
+              className="group/tab flex flex-col items-center gap-1 pt-2 pb-1 text-xs font-bold no-underline !text-muted-foreground data-[status=active]:!text-[var(--lagoon)]"
             >
               <span className="flex h-8 w-14 items-center justify-center rounded-full transition-colors duration-200 group-data-[status=active]/tab:bg-[color-mix(in_oklab,var(--lagoon)_16%,transparent)]">
                 <Icon className="size-6" strokeWidth={2.25} aria-hidden="true" />
