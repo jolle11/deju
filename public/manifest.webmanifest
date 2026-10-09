@@ -1,0 +1,13 @@
+{
+  "name": "Deju",
+  "short_name": "Deju",
+  "description": "Controla tu ayuno intermitente",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#0a1418",
+  "theme_color": "#0a1418",
+  "icons": [
+    { "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}
