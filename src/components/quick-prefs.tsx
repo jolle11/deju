@@ -1,4 +1,4 @@
-import { Check, ChevronDown, Languages, Monitor, Moon, Sun } from 'lucide-react'
+import { Check, ChevronDown, Contrast, Languages, Monitor, Moon, Sun } from 'lucide-react'
 import { type ComponentType, useEffect, useId, useRef, useState } from 'react'
 import { LOCALE_NAMES, LOCALES } from '#/lib/messages'
 import {
@@ -10,20 +10,8 @@ import {
   usePrefs,
 } from '#/lib/preferences'
 
-const THEME_ICON = {
-  '': Monitor,
-  light: Sun,
-  dark: Moon,
-  'mono-light': Sun,
-  'mono-dark': Moon,
-} as const
-const THEME_LABEL = {
-  '': 'system',
-  light: 'light',
-  dark: 'dark',
-  'mono-light': 'monoLight',
-  'mono-dark': 'monoDark',
-} as const
+const THEME_ICON = { '': Contrast, system: Monitor, light: Sun, dark: Moon } as const
+const THEME_LABEL = { '': 'default', system: 'system', light: 'light', dark: 'dark' } as const
 
 type Icon = ComponentType<{ className?: string }>
 type Option<T extends string> = { value: T; label: string; icon?: Icon }

@@ -2,7 +2,8 @@ import { useSyncExternalStore } from 'react'
 import { LOCALES, type Locale, MESSAGES, type MessageKey } from './messages'
 import { currentUser, pb, users } from './pb'
 
-export const THEMES = ['', 'light', 'dark', 'mono-light', 'mono-dark'] as const
+/** '' is the monochrome default; 'system' is the colored theme following the OS. */
+export const THEMES = ['', 'system', 'light', 'dark'] as const
 export type ThemePref = (typeof THEMES)[number]
 export const ACCENTS = ['lagoon', 'sunset', 'violet', 'forest'] as const
 export type Accent = (typeof ACCENTS)[number]
@@ -113,11 +114,11 @@ export async function updatePrefs(patch: Partial<Prefs>) {
 // --- theme -------------------------------------------------------------------
 
 export function isMonochromeTheme(theme: ThemePref) {
-  return theme === 'mono-light' || theme === 'mono-dark'
+  return theme === ''
 }
 
 export function resolveTheme(theme: ThemePref) {
-  if (theme) return theme === 'dark' || theme === 'mono-dark' ? 'dark' : 'light'
+  if (theme === 'light' || theme === 'dark') return theme
   return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
 }
 
@@ -126,7 +127,7 @@ function applyToDocument() {
   const root = document.documentElement
   const dark = resolveTheme(prefs.theme) === 'dark'
   root.classList.toggle('dark', dark)
-  root.dataset.theme = prefs.theme
+  root.dataset.theme = prefs.theme || 'default'
   root.dataset.accent = prefs.accent
   root.lang = resolveLocale(prefs.language)
   // Tint the browser/OS chrome to match the background.

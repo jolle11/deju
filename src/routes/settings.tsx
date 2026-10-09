@@ -1,5 +1,5 @@
 import { createFileRoute, redirect, useNavigate } from '@tanstack/react-router'
-import { Monitor, Moon, Sun } from 'lucide-react'
+import { Contrast, Monitor, Moon, Sun } from 'lucide-react'
 import { type ReactNode, useState } from 'react'
 import { AppShell } from '#/components/app-shell'
 import { DataSection } from '#/components/data-section'
@@ -30,14 +30,13 @@ const ACCENT_SWATCH: Record<Accent, string> = {
 
 const THEME_OPTIONS: {
   value: ThemePref
-  label: 'system' | 'light' | 'dark' | 'monoLight' | 'monoDark'
+  label: 'default' | 'system' | 'light' | 'dark'
   Icon: typeof Sun
 }[] = [
-  { value: '', label: 'system', Icon: Monitor },
+  { value: '', label: 'default', Icon: Contrast },
+  { value: 'system', label: 'system', Icon: Monitor },
   { value: 'light', label: 'light', Icon: Sun },
   { value: 'dark', label: 'dark', Icon: Moon },
-  { value: 'mono-light', label: 'monoLight', Icon: Sun },
-  { value: 'mono-dark', label: 'monoDark', Icon: Moon },
 ]
 
 export const Route = createFileRoute('/settings')({
@@ -114,7 +113,7 @@ function Settings() {
             <div className="flex flex-col gap-2">
               <span className="text-sm font-semibold">{t('settings.theme')}</span>
               <div
-                className="grid grid-cols-2 gap-2 sm:grid-cols-3"
+                className="grid grid-cols-2 gap-2 sm:grid-cols-4"
                 role="radiogroup"
                 aria-label={t('settings.theme')}
               >

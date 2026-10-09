@@ -161,9 +161,8 @@
   --hero-b: rgba(158, 220, 184, 0.1);
 }
 
-
-/* Neutral palettes override accent variations without changing the saved accent. */
-:root[data-theme='mono-light'] {
+/* Default theme: monochrome palettes that follow the light/dark scheme and ignore the accent. */
+:root[data-theme='default'] {
   --sea-ink: #171717;
   --sea-ink-soft: #525252;
   --lagoon: #404040;
@@ -186,7 +185,7 @@
   --ring: #737373;
 }
 
-:root[data-theme='mono-dark'] {
+:root.dark[data-theme='default'] {
   --sea-ink: #f5f5f5;
   --sea-ink-soft: #b3b3b3;
   --lagoon: #d4d4d4;
@@ -209,7 +208,7 @@
   --ring: #737373;
 }
 
-:root:is([data-theme='mono-light'], [data-theme='mono-dark']) {
+:root[data-theme='default'] {
   --zone-color: var(--lagoon);
   --palm: var(--sea-ink-soft);
   --kicker: var(--sea-ink-soft);
