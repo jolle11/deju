@@ -40,3 +40,13 @@ export function currentUserId() {
   if (!id) throw new Error('Not authenticated')
   return id
 }
+
+/** Prefix for per-user data cached in localStorage; wiped on logout. */
+export const USER_CACHE_PREFIX = 'deju-user-cache:'
+
+pb.authStore.onChange(() => {
+  if (pb.authStore.isValid || typeof localStorage === 'undefined') return
+  for (const key of Object.keys(localStorage)) {
+    if (key.startsWith(USER_CACHE_PREFIX)) localStorage.removeItem(key)
+  }
+})

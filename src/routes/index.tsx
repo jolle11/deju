@@ -5,7 +5,14 @@ import { AppShell } from '#/components/app-shell'
 import { FastDialog } from '#/components/fast-dialog'
 import { Delayed, Skeleton } from '#/components/skeleton'
 import { onCollectionChange } from '#/lib/live'
-import { currentUser, currentUserId, type Fast, fasts, isLoggedIn } from '#/lib/pb'
+import {
+  currentUser,
+  currentUserId,
+  type Fast,
+  fasts,
+  isLoggedIn,
+  USER_CACHE_PREFIX,
+} from '#/lib/pb'
 import { type Translate, useI18n, usePrefs } from '#/lib/preferences'
 import { durationMs, isCompleted } from '#/lib/stats'
 import { capitalize, formatDate, formatDuration } from '#/lib/time'
@@ -20,9 +27,24 @@ export const Route = createFileRoute('/')({
   component: Home,
 })
 
-/** The running fast (if any) plus the last few finished ones. */
+type RecentFasts = { active: Fast | null; past: Fast[] }
+
+const recentCacheKey = () => `${USER_CACHE_PREFIX}recent-fasts:${currentUserId()}`
+
+function readRecentCache(): RecentFasts | null {
+  try {
+    return JSON.parse(localStorage.getItem(recentCacheKey()) ?? 'null')
+  } catch {
+    return null
+  }
+}
+
+/**
+ * The running fast (if any) plus the last few finished ones. Starts from the
+ * copy saved on the last visit so the screen paints instantly, then refreshes.
+ */
 function useRecentFasts() {
-  const [state, setState] = useState<{ active: Fast | null; past: Fast[] } | null>(null)
+  const [state, setState] = useState<RecentFasts | null>(readRecentCache)
 
   useEffect(() => {
     const load = () =>
@@ -34,8 +56,11 @@ function useRecentFasts() {
           .getList(1, 7, { filter: 'endedAt != ""', sort: '-endedAt', requestKey: null })
           .then((r) => r.items),
       ])
-        .then(([active, past]) => setState({ active, past }))
-        .catch(() => setState({ active: null, past: [] }))
+        .then(([active, past]) => {
+          setState({ active, past })
+          localStorage.setItem(recentCacheKey(), JSON.stringify({ active, past }))
+        })
+        .catch(() => setState((s) => s ?? { active: null, past: [] }))
 
     load()
     // Keep every open device in sync.

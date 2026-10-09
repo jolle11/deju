@@ -1,4 +1,6 @@
-const CACHE = 'deju-shell-v1'
+const CACHE = 'deju-shell-v2'
+// The Vite dev server serves unhashed modules that must never come from cache.
+const DEV = ['localhost', '127.0.0.1'].includes(self.location.hostname)
 
 self.addEventListener('install', (event) => {
   event.waitUntil(caches.open(CACHE).then((c) => c.addAll(['/', '/manifest.webmanifest', '/icon.svg'])))
@@ -14,22 +16,33 @@ self.addEventListener('activate', (event) => {
   )
 })
 
-// Network-first for navigations and same-origin assets; cache as fallback.
+// Hashed build assets never change: serve them straight from cache.
+// Everything else (the app shell, icons) is stale-while-revalidate so the app
+// opens instantly and picks up a new deploy on the next launch.
 self.addEventListener('fetch', (event) => {
   const { request } = event
   const url = new URL(request.url)
-  if (request.method !== 'GET' || url.origin !== self.location.origin) return
+  if (DEV || request.method !== 'GET' || url.origin !== self.location.origin) return
 
+  // Every route is served the same SPA shell, so they share one cache entry.
+  const key = request.mode === 'navigate' ? '/' : request
+  const fetchAndCache = () =>
+    fetch(request).then(async (res) => {
+      if (res.ok) await (await caches.open(CACHE)).put(key, res.clone())
+      return res
+    })
+
+  if (url.pathname.startsWith('/assets/')) {
+    event.respondWith(caches.match(request).then((hit) => hit ?? fetchAndCache()))
+    return
+  }
+
+  const network = fetchAndCache()
+  event.waitUntil(network.catch(() => {}))
   event.respondWith(
-    fetch(request)
-      .then((res) => {
-        if (res.ok) {
-          const copy = res.clone()
-          caches.open(CACHE).then((c) => c.put(request, copy))
-        }
-        return res
-      })
-      .catch(async () => (await caches.match(request)) ?? (await caches.match('/'))),
+    caches
+      .match(key)
+      .then((hit) => hit ?? network),
   )
 })
 
