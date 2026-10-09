@@ -1,7 +1,9 @@
 import { createFileRoute, Link, redirect } from '@tanstack/react-router'
 import { useEffect, useState } from 'react'
 import { FastDialog } from '#/components/fast-dialog'
+import { MonthCalendar, WeeklyChart } from '#/components/stats'
 import { type Fast, fasts, isLoggedIn } from '#/lib/pb'
+import { computeStats, durationMs, isCompleted } from '#/lib/stats'
 import { formatDate, formatHours } from '#/lib/time'
 
 export const Route = createFileRoute('/history')({
@@ -31,18 +33,13 @@ function usePastFasts() {
   return items
 }
 
-function durationMs(f: Fast) {
-  return new Date(f.endedAt).getTime() - new Date(f.startedAt).getTime()
-}
-
 function History() {
   const items = usePastFasts()
   const [editing, setEditing] = useState<Fast | null>(null)
 
   if (!items) return null
 
-  const completed = items.filter((f) => durationMs(f) >= f.targetHours * 3_600_000).length
-  const longest = items.reduce((max, f) => Math.max(max, durationMs(f)), 0)
+  const stats = computeStats(items)
 
   return (
     <main className="mx-auto flex min-h-dvh max-w-md flex-col gap-6 p-6">
@@ -60,15 +57,23 @@ function History() {
       ) : (
         <>
           <dl className="grid grid-cols-3 gap-2 text-center">
-            <Stat label="Ayunos" value={String(items.length)} />
-            <Stat label="Cumplidos" value={String(completed)} />
-            <Stat label="Más largo" value={formatHours(longest).replace(/ \d+m$/, '')} />
+            <Stat label="Racha" value={`${stats.streak}d`} />
+            <Stat label="Mejor racha" value={`${stats.bestStreak}d`} />
+            <Stat label="Cumplidos" value={`${stats.completed}/${stats.total}`} />
+            <Stat label="Media" value={formatTileHours(stats.averageMs)} />
+            <Stat label="Más largo" value={formatTileHours(stats.longestMs)} />
+            <Stat label="Total" value={`${Math.round(stats.totalMs / 3_600_000)}h`} />
           </dl>
+
+          <WeeklyChart hoursByDay={stats.hoursByDay} />
+          <MonthCalendar completedDays={stats.completedDays} />
+
+          <h2 className="font-display text-xl font-extrabold">Ayunos</h2>
 
           <ul className="flex flex-col gap-2">
             {items.map((f) => {
               const ms = durationMs(f)
-              const done = ms >= f.targetHours * 3_600_000
+              const done = isCompleted(f)
               return (
                 <li key={f.id}>
                   <button
@@ -125,4 +130,8 @@ function Stat({ label, value }: { label: string; value: string }) {
       <dd className="font-display text-2xl font-extrabold tabular-nums">{value}</dd>
     </div>
   )
+}
+
+function formatTileHours(ms: number) {
+  return `${(ms / 3_600_000).toFixed(1).replace('.0', '')}h`
 }

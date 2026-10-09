@@ -46,7 +46,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
   useServiceWorker()
 
   return (
-    <html lang="es" className="dark">
+    <html lang="es" className="dark [color-scheme:dark]">
       <head>
         <HeadContent />
       </head>

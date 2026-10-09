@@ -4,6 +4,7 @@ import { FastDialog } from '#/components/fast-dialog'
 import { currentUserId, type Fast, fasts, isLoggedIn, pb } from '#/lib/pb'
 import { disablePush, enablePush, getPushSubscription, pushSupported } from '#/lib/push'
 import { formatDate, formatDuration } from '#/lib/time'
+import { type Zone, zoneAt } from '#/lib/zones'
 
 const TARGET_OPTIONS = [13, 16, 18, 20, 24, 36]
 
@@ -73,6 +74,7 @@ function Home() {
   const elapsed = fast ? now - new Date(fast.startedAt).getTime() : 0
   const goalMs = fast ? fast.targetHours * 3_600_000 : 0
   const progress = fast ? Math.min(1, elapsed / goalMs) : 0
+  const { zone, next } = zoneAt(elapsed)
 
   return (
     <main className="mx-auto flex min-h-dvh max-w-md flex-col items-center p-6">
@@ -89,7 +91,7 @@ function Home() {
       </header>
 
       <section className="flex w-full flex-1 flex-col items-center justify-center gap-10 py-8">
-        <ProgressRing progress={progress}>
+        <ProgressRing progress={progress} color={fast ? zone.color : undefined}>
           {fast ? (
             <>
               <span className="text-xs font-bold uppercase tracking-[0.2em] text-muted-foreground">
@@ -116,6 +118,7 @@ function Home() {
 
         {fast ? (
           <div className="flex w-full flex-col items-center gap-4">
+            <ZoneCard zone={zone} next={next} elapsed={elapsed} />
             <button
               type="button"
               onClick={() => setDialog('edit-active')}
@@ -201,7 +204,32 @@ function Home() {
   )
 }
 
-function ProgressRing({ progress, children }: { progress: number; children: React.ReactNode }) {
+function ZoneCard({ zone, next, elapsed }: { zone: Zone; next?: Zone; elapsed: number }) {
+  return (
+    <div className="w-full rounded-2xl border border-input px-4 py-3">
+      <div className="flex items-center gap-2">
+        <span className="size-3 rounded-full" style={{ backgroundColor: zone.color }} />
+        <span className="font-display text-lg font-extrabold">{zone.name}</span>
+      </div>
+      <p className="mt-1 text-sm text-muted-foreground">{zone.description}</p>
+      {next && (
+        <p className="mt-2 text-xs font-bold uppercase tracking-wider text-muted-foreground tabular-nums">
+          {next.name} en {formatDuration(next.fromHours * 3_600_000 - elapsed)}
+        </p>
+      )}
+    </div>
+  )
+}
+
+function ProgressRing({
+  progress,
+  color,
+  children,
+}: {
+  progress: number
+  color?: string
+  children: React.ReactNode
+}) {
   const r = 120
   const c = 2 * Math.PI * r
   return (
@@ -217,7 +245,8 @@ function ProgressRing({ progress, children }: { progress: number; children: Reac
           strokeLinecap="round"
           strokeDasharray={c}
           strokeDashoffset={c * (1 - progress)}
-          className="stroke-[var(--lagoon)] transition-[stroke-dashoffset] duration-1000"
+          style={{ stroke: color ?? 'var(--lagoon)' }}
+          className="transition-[stroke-dashoffset,stroke] duration-1000"
         />
       </svg>
       <div className="relative flex flex-col items-center gap-1">{children}</div>
