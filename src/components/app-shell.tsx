@@ -3,6 +3,7 @@ import { History, Settings, Timer } from 'lucide-react'
 import type { ReactNode } from 'react'
 import type { MessageKey } from '#/lib/messages'
 import { useI18n } from '#/lib/preferences'
+import { QuickPrefs } from './quick-prefs'
 
 const TABS = [
   { to: '/', label: 'nav.fast', Icon: Timer },
@@ -19,11 +20,14 @@ export function AppShell({ title, children }: { title?: string; children: ReactN
     <div className="lg:flex lg:min-h-dvh">
       <SideNav />
       <main className="mx-auto flex min-h-dvh w-full max-w-md flex-col gap-6 px-6 pt-[max(1.5rem,env(safe-area-inset-top))] pb-[calc(6rem+env(safe-area-inset-bottom))] lg:max-w-6xl lg:px-12 lg:pt-10 lg:pb-10">
-        {title && (
-          <h1 className="font-display text-3xl font-extrabold tracking-tight lg:text-4xl">
-            {title}
-          </h1>
-        )}
+        <header className="flex items-center justify-between gap-4">
+          {title && (
+            <h1 className="font-display text-3xl font-extrabold tracking-tight lg:text-4xl">
+              {title}
+            </h1>
+          )}
+          <QuickPrefs className="ml-auto" />
+        </header>
         {children}
       </main>
       <BottomNav />

@@ -66,7 +66,7 @@ function History() {
             </dl>
 
             <WeeklyChart hoursByDay={stats.hoursByDay} goalHours={targetHours} />
-            <MonthCalendar completedDays={stats.completedDays} />
+            <MonthCalendar dayLevels={stats.dayLevels} />
           </div>
 
           <section className="flex flex-col gap-3">

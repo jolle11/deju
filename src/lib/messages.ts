@@ -84,6 +84,8 @@ const es = {
   'chart.last7': 'Últimos 7 días',
   'calendar.prev': 'Mes anterior',
   'calendar.next': 'Mes siguiente',
+  'calendar.legendGoal': 'Objetivo cumplido',
+  'calendar.legendMin': '{h}h o más',
 
   'settings.title': 'Ajustes',
   'settings.account': 'Cuenta',
@@ -239,6 +241,8 @@ const ca: Messages = {
   'chart.last7': 'Últims 7 dies',
   'calendar.prev': 'Mes anterior',
   'calendar.next': 'Mes següent',
+  'calendar.legendGoal': 'Objectiu assolit',
+  'calendar.legendMin': '{h}h o més',
 
   'settings.title': 'Ajustos',
   'settings.account': 'Compte',
@@ -392,6 +396,8 @@ const en: Messages = {
   'chart.last7': 'Last 7 days',
   'calendar.prev': 'Previous month',
   'calendar.next': 'Next month',
+  'calendar.legendGoal': 'Goal reached',
+  'calendar.legendMin': '{h}h or more',
 
   'settings.title': 'Settings',
   'settings.account': 'Account',

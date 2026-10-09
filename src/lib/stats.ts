@@ -6,6 +6,12 @@ export function durationMs(f: Fast) {
   return new Date(f.endedAt).getTime() - new Date(f.startedAt).getTime()
 }
 
+/** A fast of at least this many hours counts as done, even if it missed its goal. */
+export const MIN_FAST_HOURS = 12
+
+/** "goal" = reached its own target; "min" = at least MIN_FAST_HOURS. */
+export type DayLevel = 'goal' | 'min'
+
 export function isCompleted(f: Fast) {
   return durationMs(f) >= f.targetHours * 3_600_000
 }
@@ -30,6 +36,13 @@ function addDays(date: Date, n: number) {
 
 export function computeStats(items: Fast[], now = new Date()) {
   const completedDays = new Set(items.filter(isCompleted).map((f) => dayKey(f.endedAt)))
+  const dayLevels = new Map<string, DayLevel>()
+  for (const f of items) {
+    const key = dayKey(f.endedAt)
+    if (isCompleted(f)) dayLevels.set(key, 'goal')
+    else if (durationMs(f) >= MIN_FAST_HOURS * 3_600_000 && !dayLevels.has(key))
+      dayLevels.set(key, 'min')
+  }
   const hoursByDay = new Map<string, number>()
   for (const f of items) {
     const key = dayKey(f.endedAt)
@@ -66,6 +79,7 @@ export function computeStats(items: Fast[], now = new Date()) {
     streak,
     bestStreak,
     completedDays,
+    dayLevels,
     hoursByDay,
   }
 }

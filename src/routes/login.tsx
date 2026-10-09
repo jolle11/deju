@@ -1,5 +1,6 @@
 import { createFileRoute, redirect, useNavigate } from '@tanstack/react-router'
 import { useState } from 'react'
+import { QuickPrefs } from '#/components/quick-prefs'
 import { isLoggedIn, pb } from '#/lib/pb'
 import { useI18n } from '#/lib/preferences'
 
@@ -38,6 +39,7 @@ function Login() {
 
   return (
     <main className="mx-auto flex min-h-dvh max-w-sm flex-col justify-center gap-6 px-6 pt-[max(1.5rem,env(safe-area-inset-top))] pb-[max(1.5rem,env(safe-area-inset-bottom))]">
+      <QuickPrefs className="absolute top-[max(1rem,env(safe-area-inset-top))] right-4" />
       <div>
         <h1 className="font-display text-4xl font-extrabold tracking-tight">{t('app.name')}</h1>
         <p className="mt-1 text-muted-foreground">{t('login.tagline')}</p>

@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useI18n } from '#/lib/preferences'
-import { dayKey, lastDays, startOfDay } from '#/lib/stats'
+import { type DayLevel, dayKey, lastDays, MIN_FAST_HOURS, startOfDay } from '#/lib/stats'
 import { capitalize, dateFormat } from '#/lib/time'
 
 const NARROW_DAY = { weekday: 'narrow' } as const
@@ -86,8 +86,16 @@ export function WeeklyChart({
   )
 }
 
-/** Month grid with days where a fast hit its target highlighted. */
-export function MonthCalendar({ completedDays }: { completedDays: Set<string> }) {
+const LEVEL_CLASS: Record<DayLevel, string> = {
+  goal: 'bg-[var(--lagoon)] text-black',
+  min: 'bg-[var(--lagoon)]/25 text-foreground ring-1 ring-inset ring-[var(--lagoon)]/60',
+}
+
+/**
+ * Month grid. Solid = a fast reached its goal that day; tinted = at least
+ * MIN_FAST_HOURS; unmarked = no qualifying fast. Days are the fast's end date.
+ */
+export function MonthCalendar({ dayLevels }: { dayLevels: Map<string, DayLevel> }) {
   const { t, locale } = useI18n()
   const monthFmt = dateFormat(locale, MONTH)
   const weekdayFmt = dateFormat(locale, NARROW_DAY)
@@ -141,21 +149,40 @@ export function MonthCalendar({ completedDays }: { completedDays: Set<string> })
           <span key={key} />
         ))}
         {dates.map((d) => {
-          const done = completedDays.has(dayKey(d))
+          const level = dayLevels.get(dayKey(d))
           const isToday = d.getTime() === today.getTime()
           return (
             <span
               key={dayKey(d)}
               className={`grid aspect-square place-items-center rounded-full text-sm font-bold tabular-nums ${
-                done ? 'bg-[var(--lagoon)] text-black' : 'text-muted-foreground'
-              } ${isToday && !done ? 'ring-2 ring-input' : ''}`}
+                level ? LEVEL_CLASS[level] : 'text-muted-foreground'
+              } ${isToday && !level ? 'ring-2 ring-input' : ''}`}
             >
               {d.getDate()}
-              {done && <span className="sr-only"> ({t('history.goalMet')})</span>}
+              {level && (
+                <span className="sr-only">
+                  {' '}
+                  (
+                  {level === 'goal'
+                    ? t('calendar.legendGoal')
+                    : t('calendar.legendMin', { h: MIN_FAST_HOURS })}
+                  )
+                </span>
+              )}
             </span>
           )
         })}
       </div>
+      <ul className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs font-semibold text-muted-foreground">
+        <li className="flex items-center gap-1.5">
+          <span className={`size-3 rounded-full ${LEVEL_CLASS.goal}`} />
+          {t('calendar.legendGoal')}
+        </li>
+        <li className="flex items-center gap-1.5">
+          <span className={`size-3 rounded-full ${LEVEL_CLASS.min}`} />
+          {t('calendar.legendMin', { h: MIN_FAST_HOURS })}
+        </li>
+      </ul>
     </section>
   )
 }
