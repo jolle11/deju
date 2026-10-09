@@ -9,6 +9,7 @@ import { currentUser, fasts, isLoggedIn, pb } from '#/lib/pb'
 import {
   ACCENTS,
   type Accent,
+  isMonochromeTheme,
   type Prefs,
   type ThemePref,
   updatePrefs,
@@ -27,12 +28,17 @@ const ACCENT_SWATCH: Record<Accent, string> = {
   forest: '#2f8a4f',
 }
 
-const THEME_OPTIONS: { value: ThemePref; label: 'system' | 'light' | 'dark'; Icon: typeof Sun }[] =
-  [
-    { value: '', label: 'system', Icon: Monitor },
-    { value: 'light', label: 'light', Icon: Sun },
-    { value: 'dark', label: 'dark', Icon: Moon },
-  ]
+const THEME_OPTIONS: {
+  value: ThemePref
+  label: 'system' | 'light' | 'dark' | 'monoLight' | 'monoDark'
+  Icon: typeof Sun
+}[] = [
+  { value: '', label: 'system', Icon: Monitor },
+  { value: 'light', label: 'light', Icon: Sun },
+  { value: 'dark', label: 'dark', Icon: Moon },
+  { value: 'mono-light', label: 'monoLight', Icon: Sun },
+  { value: 'mono-dark', label: 'monoDark', Icon: Moon },
+]
 
 export const Route = createFileRoute('/settings')({
   beforeLoad: () => {
@@ -107,7 +113,11 @@ function Settings() {
           <Card title={t('settings.appearance')}>
             <div className="flex flex-col gap-2">
               <span className="text-sm font-semibold">{t('settings.theme')}</span>
-              <div className="grid grid-cols-3 gap-2" role="radiogroup">
+              <div
+                className="grid grid-cols-2 gap-2 sm:grid-cols-3"
+                role="radiogroup"
+                aria-label={t('settings.theme')}
+              >
                 {THEME_OPTIONS.map(({ value, label, Icon }) => {
                   const selected = prefs.theme === value
                   return (
@@ -132,31 +142,33 @@ function Settings() {
               </div>
             </div>
 
-            <div className="flex flex-col gap-2">
-              <span className="text-sm font-semibold">{t('settings.accent')}</span>
-              <div className="flex flex-wrap gap-3" role="radiogroup">
-                {ACCENTS.map((accent) => {
-                  const selected = prefs.accent === accent
-                  return (
-                    // biome-ignore lint/a11y/useSemanticElements: styled swatch picker
-                    <button
-                      key={accent}
-                      type="button"
-                      role="radio"
-                      aria-checked={selected}
-                      onClick={() => save({ accent })}
-                      className="flex items-center gap-2 rounded-full border border-input py-1.5 pr-4 pl-1.5 text-sm font-bold aria-checked:border-foreground"
-                    >
-                      <span
-                        className="size-6 rounded-full"
-                        style={{ backgroundColor: ACCENT_SWATCH[accent] }}
-                      />
-                      {t(`settings.accent.${accent}`)}
-                    </button>
-                  )
-                })}
+            {!isMonochromeTheme(prefs.theme) && (
+              <div className="flex flex-col gap-2">
+                <span className="text-sm font-semibold">{t('settings.accent')}</span>
+                <div className="flex flex-wrap gap-3" role="radiogroup">
+                  {ACCENTS.map((accent) => {
+                    const selected = prefs.accent === accent
+                    return (
+                      // biome-ignore lint/a11y/useSemanticElements: styled swatch picker
+                      <button
+                        key={accent}
+                        type="button"
+                        role="radio"
+                        aria-checked={selected}
+                        onClick={() => save({ accent })}
+                        className="flex items-center gap-2 rounded-full border border-input py-1.5 pr-4 pl-1.5 text-sm font-bold aria-checked:border-foreground"
+                      >
+                        <span
+                          className="size-6 rounded-full"
+                          style={{ backgroundColor: ACCENT_SWATCH[accent] }}
+                        />
+                        {t(`settings.accent.${accent}`)}
+                      </button>
+                    )
+                  })}
+                </div>
               </div>
-            </div>
+            )}
           </Card>
 
           <Card title={t('settings.language')}>

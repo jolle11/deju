@@ -7,11 +7,11 @@ export type Zone = {
 
 /** Metabolic phases shown on the timer. Keep in sync with worker/src/milestones.ts. */
 export const ZONES: Zone[] = [
-  { id: 'anabolic', fromHours: 0, color: '#94a3b8' },
-  { id: 'catabolic', fromHours: 4, color: '#60d7cf' },
-  { id: 'fat-burning', fromHours: 16, color: '#f5a524' },
-  { id: 'ketosis', fromHours: 24, color: '#f2555a' },
-  { id: 'deep-ketosis', fromHours: 72, color: '#b57cf6' },
+  { id: 'anabolic', fromHours: 0, color: 'var(--zone-color, #94a3b8)' },
+  { id: 'catabolic', fromHours: 4, color: 'var(--zone-color, #60d7cf)' },
+  { id: 'fat-burning', fromHours: 16, color: 'var(--zone-color, #f5a524)' },
+  { id: 'ketosis', fromHours: 24, color: 'var(--zone-color, #f2555a)' },
+  { id: 'deep-ketosis', fromHours: 72, color: 'var(--zone-color, #b57cf6)' },
 ]
 
 export function zoneAt(elapsedMs: number) {
