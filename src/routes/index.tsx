@@ -2,12 +2,12 @@ import { createFileRoute, Link, redirect } from '@tanstack/react-router'
 import { ChevronDown } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { AppShell } from '#/components/app-shell'
-import { FastDialog, RATINGS } from '#/components/fast-dialog'
+import { FastDialog } from '#/components/fast-dialog'
 import { onCollectionChange } from '#/lib/live'
 import { currentUser, currentUserId, type Fast, fasts, isLoggedIn } from '#/lib/pb'
 import { type Translate, useI18n, usePrefs } from '#/lib/preferences'
 import { durationMs, isCompleted } from '#/lib/stats'
-import { capitalize, formatDate, formatDuration, formatHours } from '#/lib/time'
+import { capitalize, formatDate, formatDuration } from '#/lib/time'
 import { type Zone, zoneAt } from '#/lib/zones'
 
 export const Route = createFileRoute('/')({
@@ -30,7 +30,7 @@ function useRecentFasts() {
           .getList(1, 1, { filter: 'endedAt = ""', sort: '-startedAt', requestKey: null })
           .then((r) => r.items[0] ?? null),
         fasts()
-          .getList(1, 3, { filter: 'endedAt != ""', sort: '-endedAt', requestKey: null })
+          .getList(1, 7, { filter: 'endedAt != ""', sort: '-endedAt', requestKey: null })
           .then((r) => r.items),
       ])
         .then(([active, past]) => setState({ active, past }))
@@ -83,83 +83,68 @@ function Home() {
 
   return (
     <AppShell>
-      <div className="flex flex-1 flex-col gap-10 lg:grid lg:items-center lg:grid-cols-[minmax(0,1fr)_22rem] lg:items-start lg:gap-12">
-        {/* Timer column */}
-        <section className="flex flex-1 flex-col items-center gap-6 lg:self-stretch lg:justify-center lg:gap-8">
-          <div className="flex flex-1 items-center lg:flex-none">
-            <ProgressRing progress={progress} color={fast ? zone.color : undefined}>
-              {fast ? (
-                <>
-                  <span className="text-xs font-bold uppercase tracking-[0.2em] text-muted-foreground">
-                    {progress >= 1
-                      ? t('home.goalReached')
-                      : t('home.fastOf', { h: fast.targetHours })}
-                  </span>
-                  <span className="font-display text-5xl font-extrabold tracking-tight tabular-nums lg:text-6xl">
-                    {formatDuration(elapsed)}
-                  </span>
-                  <span className="text-sm font-semibold text-muted-foreground tabular-nums">
-                    {progress >= 1
-                      ? `+${formatDuration(elapsed - goalMs)}`
-                      : t('home.remaining', { t: formatDuration(goalMs - elapsed) })}
-                  </span>
-                </>
-              ) : (
-                <IdleStatus
-                  t={t}
-                  lastEnded={lastEnded}
-                  targetHours={targetHours}
-                  eatingWindowHours={eatingWindowHours}
-                  now={now}
-                />
-              )}
-            </ProgressRing>
-          </div>
-
-          {fast && (
-            <div className="w-full lg:hidden">
-              <ZoneCard t={t} zone={zone} next={next} elapsed={elapsed} />
-            </div>
+      <div className="flex flex-1 flex-col items-center justify-center gap-6 lg:gap-8">
+        <ProgressRing progress={progress} color={fast ? zone.color : undefined}>
+          {fast ? (
+            <>
+              <span className="text-xs font-bold uppercase tracking-[0.2em] text-muted-foreground">
+                {progress >= 1 ? t('home.goalReached') : t('home.fastOf', { h: fast.targetHours })}
+              </span>
+              <span className="font-display text-5xl font-extrabold tracking-tight tabular-nums lg:text-6xl">
+                {formatDuration(elapsed)}
+              </span>
+              <span className="text-sm font-semibold text-muted-foreground tabular-nums">
+                {progress >= 1
+                  ? `+${formatDuration(elapsed - goalMs)}`
+                  : t('home.remaining', { t: formatDuration(goalMs - elapsed) })}
+              </span>
+            </>
+          ) : (
+            <IdleStatus
+              t={t}
+              lastEnded={lastEnded}
+              targetHours={targetHours}
+              eatingWindowHours={eatingWindowHours}
+              now={now}
+            />
           )}
-
-          <div className="flex w-full max-w-sm flex-col items-center gap-3">
-            {fast ? (
-              <>
-                <button
-                  type="button"
-                  onClick={() => setDialog('edit-active')}
-                  className="text-sm font-semibold text-muted-foreground"
-                >
-                  {t('home.startedAt', { date: formatDate(fast.startedAt, locale) })} ·{' '}
-                  <span className="underline">{t('home.edit')}</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setDialog('finish')}
-                  className="w-full rounded-full bg-destructive px-6 py-4 text-lg font-extrabold text-white"
-                >
-                  {t('home.stop')}
-                </button>
-              </>
-            ) : (
+        </ProgressRing>
+        <StreakStrip t={t} locale={locale} items={past} />
+        {fast && (
+          <div className="w-full max-w-sm">
+            <ZoneCard t={t} zone={zone} next={next} elapsed={elapsed} />
+          </div>
+        )}
+        <div className="flex w-full max-w-sm flex-col items-center gap-3">
+          {fast ? (
+            <>
               <button
                 type="button"
-                onClick={start}
-                className="w-full rounded-full bg-primary px-6 py-4 text-lg font-extrabold text-primary-foreground"
+                onClick={() => setDialog('edit-active')}
+                className="text-sm font-semibold text-muted-foreground"
               >
-                {t('home.start')}
+                {t('home.startedAt', { date: formatDate(fast.startedAt, locale) })} ·{' '}
+                <span className="underline">{t('home.edit')}</span>
               </button>
-            )}
-          </div>
-        </section>
-
-        {/* Desktop side column */}
-        <aside className="hidden flex-col gap-4 lg:flex lg:pt-4">
-          {fast && <ZoneCard t={t} zone={zone} next={next} elapsed={elapsed} />}
-          <RecentFasts t={t} locale={locale} items={past} />
-        </aside>
+              <button
+                type="button"
+                onClick={() => setDialog('finish')}
+                className="w-full rounded-full bg-destructive px-6 py-4 text-lg font-extrabold text-white"
+              >
+                {t('home.stop')}
+              </button>
+            </>
+          ) : (
+            <button
+              type="button"
+              onClick={start}
+              className="w-full rounded-full bg-primary px-6 py-4 text-lg font-extrabold text-primary-foreground"
+            >
+              {t('home.start')}
+            </button>
+          )}
+        </div>
       </div>
-
       {fast && dialog && (
         <FastDialog
           fast={fast}
@@ -169,6 +154,35 @@ function Home() {
         />
       )}
     </AppShell>
+  )
+}
+
+/** Last fasts as a strip of dots, oldest to newest; filled when the goal was met. */
+function StreakStrip({ t, locale, items }: { t: Translate; locale: string; items: Fast[] }) {
+  if (items.length === 0) return null
+  return (
+    <Link to="/history" className="flex items-end gap-3" aria-label={t('home.recent')}>
+      {[...items].reverse().map((f) => (
+        <span
+          key={f.id}
+          className="flex flex-col items-center gap-1"
+          title={capitalize(formatDate(f.startedAt, locale))}
+        >
+          <span
+            className={`grid size-9 place-items-center rounded-full text-[0.65rem] font-extrabold tabular-nums ${
+              isCompleted(f)
+                ? 'bg-[var(--lagoon)] text-white'
+                : 'border-2 border-foreground/20 text-muted-foreground'
+            }`}
+          >
+            {Math.round(durationMs(f) / 3_600_000)}
+          </span>
+          <span className="text-[0.65rem] font-semibold uppercase text-muted-foreground">
+            {new Date(f.startedAt).toLocaleDateString(locale, { weekday: 'narrow' })}
+          </span>
+        </span>
+      ))}
+    </Link>
   )
 }
 
@@ -254,37 +268,6 @@ function ZoneCard({
         </p>
       )}
     </div>
-  )
-}
-
-/** Desktop-only summary of the last fasts. */
-function RecentFasts({ t, locale, items }: { t: Translate; locale: string; items: Fast[] }) {
-  if (items.length === 0) return null
-  return (
-    <section className="hidden flex-col gap-2 rounded-2xl border border-input p-4 lg:flex">
-      <header className="flex items-baseline justify-between">
-        <h2 className="font-display text-lg font-extrabold">{t('home.recent')}</h2>
-        <Link to="/history" className="text-sm font-semibold">
-          {t('home.seeAll')}
-        </Link>
-      </header>
-      <ul className="flex flex-col divide-y divide-input">
-        {items.map((f) => (
-          <li key={f.id} className="flex items-center gap-3 py-2">
-            <span
-              className={`size-2.5 shrink-0 rounded-full ${isCompleted(f) ? 'bg-[var(--lagoon)]' : 'bg-foreground/20'}`}
-            />
-            <span className="flex-1 text-sm text-muted-foreground">
-              {capitalize(formatDate(f.startedAt, locale))}
-              {f.rating > 0 && ` · ${RATINGS[f.rating - 1]}`}
-            </span>
-            <span className="font-display font-extrabold tabular-nums">
-              {formatHours(durationMs(f))}
-            </span>
-          </li>
-        ))}
-      </ul>
-    </section>
   )
 }
 
