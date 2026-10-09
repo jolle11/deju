@@ -1,4 +1,4 @@
-import { Link, useNavigate } from '@tanstack/react-router'
+import { Link, useLocation, useNavigate } from '@tanstack/react-router'
 import { History, LogOut, PanelLeftClose, PanelLeftOpen, Settings, Timer } from 'lucide-react'
 import { type ReactNode, useEffect, useState } from 'react'
 import type { MessageKey } from '#/lib/messages'
@@ -13,6 +13,7 @@ const TABS = [
 ] as const satisfies readonly { to: string; label: MessageKey; Icon: unknown }[]
 
 const SIDEBAR_STORAGE_KEY = 'deju-sidebar-collapsed'
+let lastTabIndex = -1
 let sidebarCollapsed = false
 
 /**
@@ -21,10 +22,14 @@ let sidebarCollapsed = false
  */
 export function AppShell({ title, children }: { title?: string; children: ReactNode }) {
   const { t } = useI18n()
+  const swipe = useTabSwipe()
+  const enter = useTabEnterAnimation()
   return (
-    <div className="lg:flex lg:min-h-dvh">
+    <div className="lg:flex lg:min-h-dvh" {...swipe}>
       <SideNav />
-      <main className="mx-auto flex min-h-dvh w-full max-w-md flex-col gap-6 px-6 pt-[calc(1.5rem+env(safe-area-inset-top))] pb-[calc(4.5rem+max(0.25rem,calc(env(safe-area-inset-bottom)-1.5rem)))] lg:max-w-6xl lg:px-12 lg:pt-10 lg:pb-10">
+      <main
+        className={`${enter} mx-auto flex min-h-dvh w-full max-w-md flex-col gap-6 px-6 pt-[calc(1.5rem+env(safe-area-inset-top))] pb-[calc(5.25rem+max(0.25rem,calc(env(safe-area-inset-bottom)-1.5rem)))] lg:max-w-6xl lg:px-12 lg:pt-10 lg:pb-10`}
+      >
         <header className="flex items-center justify-between gap-4">
           {title ? (
             <h1 className="font-display text-3xl font-extrabold tracking-tight lg:text-4xl">
@@ -36,13 +41,83 @@ export function AppShell({ title, children }: { title?: string; children: ReactN
               {t('app.name')}
             </span>
           )}
-          <QuickPrefs className="ml-auto" />
+          <QuickPrefs className="ml-auto lg:hidden" />
         </header>
         {children}
       </main>
       <BottomNav />
     </div>
   )
+}
+
+/**
+ * Mobile-only slide-in when switching tabs, from the side of the tab we're
+ * coming towards so it matches the swipe direction.
+ */
+function useTabEnterAnimation() {
+  const { pathname } = useLocation()
+  const index = TABS.findIndex((tab) => tab.to === pathname)
+  const [animation] = useState(() => {
+    if (lastTabIndex === -1 || index === -1 || index === lastTabIndex) return ''
+    const from =
+      index > lastTabIndex ? 'max-lg:slide-in-from-right-12' : 'max-lg:slide-in-from-left-12'
+    return `max-lg:animate-in max-lg:fade-in-0 max-lg:duration-200 max-lg:ease-out motion-reduce:animate-none ${from}`
+  })
+  useEffect(() => {
+    if (index !== -1) lastTabIndex = index
+  }, [index])
+  return animation
+}
+
+const SWIPE_MIN_DISTANCE = 60
+
+/**
+ * Horizontal swipe between tabs on touch screens. The first and last tabs are
+ * hard stops. Swipes starting inside dialogs, form controls or horizontally
+ * scrollable areas are ignored so they keep their own gestures.
+ */
+function useTabSwipe() {
+  const navigate = useNavigate()
+  const { pathname } = useLocation()
+  const [start, setStart] = useState<{ x: number; y: number } | null>(null)
+
+  return {
+    onTouchStart(event: React.TouchEvent) {
+      const target = event.target as HTMLElement
+      if (
+        event.touches.length !== 1 ||
+        window.matchMedia('(min-width: 1024px)').matches ||
+        target.closest('[role="dialog"], dialog, input, textarea, select, [data-no-swipe]') ||
+        isInHorizontalScroller(target)
+      ) {
+        setStart(null)
+        return
+      }
+      setStart({ x: event.touches[0].clientX, y: event.touches[0].clientY })
+    },
+    onTouchEnd(event: React.TouchEvent) {
+      if (!start) return
+      const dx = event.changedTouches[0].clientX - start.x
+      const dy = event.changedTouches[0].clientY - start.y
+      setStart(null)
+      if (Math.abs(dx) < SWIPE_MIN_DISTANCE || Math.abs(dx) < Math.abs(dy) * 1.5) return
+      const index = TABS.findIndex((tab) => tab.to === pathname)
+      if (index === -1) return
+      // Right-to-left swipe moves to the next tab.
+      const next = TABS[index + (dx < 0 ? 1 : -1)]
+      if (next) navigate({ to: next.to })
+    },
+  }
+}
+
+function isInHorizontalScroller(element: HTMLElement | null) {
+  for (let el = element; el && el !== document.body; el = el.parentElement) {
+    const { overflowX } = getComputedStyle(el)
+    if ((overflowX === 'auto' || overflowX === 'scroll') && el.scrollWidth > el.clientWidth) {
+      return true
+    }
+  }
+  return false
 }
 
 function SideNav() {
@@ -128,6 +203,7 @@ function SideNav() {
           ))}
         </ul>
       </nav>
+      <QuickPrefs variant="sidebar" collapsed={collapsed} className="mt-auto" />
       <button
         type="button"
         aria-label={t('settings.logout')}
@@ -136,7 +212,7 @@ function SideNav() {
           pb.authStore.clear()
           navigate({ to: '/welcome' })
         }}
-        className={`group/sidebar-action relative mt-auto flex items-center gap-3 rounded-xl py-2.5 text-left font-bold text-red-500 hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring dark:text-red-400 ${collapsed ? 'justify-center px-0' : 'px-3'}`}
+        className={`group/sidebar-action relative -mt-4 flex items-center gap-3 rounded-xl py-2.5 text-left font-bold text-red-500 hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring dark:text-red-400 ${collapsed ? 'justify-center px-0' : 'px-3'}`}
       >
         <LogOut className="size-5 shrink-0" strokeWidth={2.25} aria-hidden="true" />
         {collapsed ? (
@@ -171,9 +247,11 @@ function BottomNav() {
             <Link
               to={to}
               activeOptions={{ exact: true }}
-              className="flex flex-col items-center gap-1 pt-2 pb-1 text-xs font-bold no-underline !text-muted-foreground data-[status=active]:!text-[var(--lagoon)]"
+              className="group/tab flex flex-col items-center gap-1 pt-2 pb-2.5 text-xs font-bold no-underline !text-muted-foreground data-[status=active]:!text-[var(--lagoon)]"
             >
-              <Icon className="size-6" strokeWidth={2.25} aria-hidden="true" />
+              <span className="flex h-8 w-14 items-center justify-center rounded-full transition-colors duration-200 group-data-[status=active]/tab:bg-[color-mix(in_oklab,var(--lagoon)_16%,transparent)]">
+                <Icon className="size-6" strokeWidth={2.25} aria-hidden="true" />
+              </span>
               {t(label)}
             </Link>
           </li>

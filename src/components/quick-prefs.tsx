@@ -19,7 +19,17 @@ type Option<T extends string> = { value: T; label: string; icon?: Icon }
  * Compact theme + language controls available on every screen. The full
  * pickers still live in Settings.
  */
-export function QuickPrefs({ className = '' }: { className?: string }) {
+export function QuickPrefs({
+  className = '',
+  variant = 'header',
+  collapsed = false,
+}: {
+  className?: string
+  /** `sidebar` stacks the controls and opens menus upwards, away from the screen edge. */
+  variant?: 'header' | 'sidebar'
+  /** Icon-only sidebar triggers. */
+  collapsed?: boolean
+}) {
   const { t } = useI18n()
   const prefs = usePrefs()
 
@@ -29,8 +39,12 @@ export function QuickPrefs({ className = '' }: { className?: string }) {
   }
 
   return (
-    <div className={`flex items-center gap-2 ${className}`}>
+    <div
+      className={`flex gap-2 ${variant === 'sidebar' ? 'flex-col' : 'items-center'} ${className}`}
+    >
       <Dropdown
+        variant={variant}
+        collapsed={collapsed}
         label={t('settings.language')}
         icon={Languages}
         value={prefs.language}
@@ -41,6 +55,8 @@ export function QuickPrefs({ className = '' }: { className?: string }) {
         ]}
       />
       <Dropdown
+        variant={variant}
+        collapsed={collapsed}
         label={t('settings.theme')}
         icon={THEME_ICON[prefs.theme]}
         value={prefs.theme}
@@ -56,12 +72,16 @@ export function QuickPrefs({ className = '' }: { className?: string }) {
 }
 
 function Dropdown<T extends string>({
+  variant,
+  collapsed,
   label,
   icon: TriggerIcon,
   value,
   options,
   onChange,
 }: {
+  variant: 'header' | 'sidebar'
+  collapsed: boolean
   label: string
   icon: Icon
   value: T
@@ -75,6 +95,7 @@ function Dropdown<T extends string>({
   const listRef = useRef<HTMLDivElement>(null)
   const listId = useId()
   const current = options.find((o) => o.value === value) ?? options[0]
+  const sidebar = variant === 'sidebar'
 
   useEffect(() => {
     if (!open) return
@@ -125,7 +146,7 @@ function Dropdown<T extends string>({
   }
 
   return (
-    <div ref={rootRef} className="relative">
+    <div ref={rootRef} className={`relative ${sidebar && !collapsed ? 'w-full' : ''}`}>
       <button
         ref={triggerRef}
         type="button"
@@ -140,14 +161,20 @@ function Dropdown<T extends string>({
             show()
           }
         }}
-        className={`flex items-center gap-1.5 rounded-full border border-input p-2 text-sm lg:py-1.5 lg:px-2.5 font-bold text-foreground transition-colors hover:bg-muted/60 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none ${open ? 'bg-muted/60' : ''}`}
+        className={`flex items-center gap-1.5 rounded-full border border-input text-sm font-bold text-foreground transition-colors hover:bg-muted/60 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none ${sidebar ? (collapsed ? 'mx-auto p-2.5' : 'w-full py-2 px-3') : 'p-2 lg:py-1.5 lg:px-2.5'} ${open ? 'bg-muted/60' : ''}`}
       >
         <TriggerIcon className="size-4 text-muted-foreground" />
-        <span className="hidden lg:inline">{current.label}</span>
-        <ChevronDown
-          className={`hidden size-3.5 text-muted-foreground transition-transform lg:block ${open ? 'rotate-180' : ''}`}
-          aria-hidden="true"
-        />
+        {!(sidebar && collapsed) && (
+          <>
+            <span className={sidebar ? 'flex-1 text-left' : 'hidden lg:inline'}>
+              {current.label}
+            </span>
+            <ChevronDown
+              className={`size-3.5 text-muted-foreground transition-transform ${sidebar ? '' : 'hidden lg:block'} ${open ? 'rotate-180' : ''}`}
+              aria-hidden="true"
+            />
+          </>
+        )}
       </button>
       {open && (
         <div
@@ -158,7 +185,7 @@ function Dropdown<T extends string>({
           aria-label={label}
           aria-activedescendant={`${listId}-${active}`}
           onKeyDown={onListKey}
-          className="absolute right-0 z-50 mt-1.5 min-w-full origin-top-right animate-in rounded-xl border border-border bg-popover p-1 text-popover-foreground shadow-lg outline-none fade-in-0 zoom-in-95"
+          className={`absolute z-50 min-w-full animate-in ${sidebar ? 'bottom-full left-0 mb-1.5 origin-bottom-left' : 'right-0 mt-1.5 origin-top-right'}  rounded-xl border border-border bg-popover p-1 text-popover-foreground shadow-lg outline-none fade-in-0 zoom-in-95`}
         >
           {options.map((option, i) => {
             const selected = option.value === value

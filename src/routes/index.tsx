@@ -147,7 +147,7 @@ function Home() {
                 onClick={start}
                 className="w-full rounded-full bg-primary px-6 py-4 text-lg font-extrabold text-primary-foreground"
               >
-                {t('home.start', { h: targetHours })}
+                {t('home.start')}
               </button>
             )}
           </div>
