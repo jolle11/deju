@@ -101,7 +101,7 @@ function Home() {
   const { targetHours, eatingWindowHours } = usePrefs()
   const { fast, lastEnded, past, loading, setActive, reload } = useRecentFasts()
   const now = useNow(Boolean(fast || lastEnded))
-  const [dialog, setDialog] = useState<'edit-active' | 'finish' | null>(null)
+  const [dialog, setDialog] = useState<'edit-active' | null>(null)
 
   // The fast being created, so edits made before the server answers can wait for its id.
   const pendingCreate = useRef<Promise<Fast> | null>(null)
@@ -124,6 +124,20 @@ function Home() {
       reload()
     } finally {
       if (pendingCreate.current === created) pendingCreate.current = null
+    }
+  }
+
+  async function stop() {
+    if (!fast) return
+    const active = fast
+    const endedAt = new Date().toISOString()
+    setActive(null)
+    try {
+      const id = active.id || (await pendingCreate.current)?.id
+      if (!id) throw new Error(t('common.saveError'))
+      await fasts().update(id, { endedAt })
+    } finally {
+      reload()
     }
   }
 
@@ -185,7 +199,7 @@ function Home() {
               </button>
               <button
                 type="button"
-                onClick={() => setDialog('finish')}
+                onClick={stop}
                 className="w-full rounded-full bg-destructive px-6 py-4 text-lg font-extrabold text-white"
               >
                 {t('home.stop')}
