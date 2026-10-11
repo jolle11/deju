@@ -43,21 +43,40 @@ export async function enablePush() {
   if (permission !== 'granted') throw new PushPermissionError()
 
   const reg = await navigator.serviceWorker.ready
-  const sub =
+  let sub =
     (await reg.pushManager.getSubscription()) ??
     (await reg.pushManager.subscribe({
       userVisibleOnly: true,
       applicationServerKey: urlBase64ToUint8Array(vapidPublicKey),
     }))
 
-  const json = sub.toJSON()
-  const existing = await pb
-    .collection('push_subscriptions')
-    .getFirstListItem(pb.filter('endpoint = {:endpoint}', { endpoint: sub.endpoint }))
-    .catch(() => null)
+  const existing = await findRecord(sub.endpoint)
   if (existing) return
 
-  await pb.collection('push_subscriptions').create({
+  try {
+    await saveSubscription(sub)
+  } catch {
+    // The endpoint is still registered to another account that used this
+    // device; a fresh subscription gets a new endpoint we can own.
+    await sub.unsubscribe()
+    sub = await reg.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: urlBase64ToUint8Array(vapidPublicKey),
+    })
+    await saveSubscription(sub)
+  }
+}
+
+function findRecord(endpoint: string) {
+  return pb
+    .collection('push_subscriptions')
+    .getFirstListItem(pb.filter('endpoint = {:endpoint}', { endpoint }))
+    .catch(() => null)
+}
+
+function saveSubscription(sub: PushSubscription) {
+  const json = sub.toJSON()
+  return pb.collection('push_subscriptions').create({
     user: currentUserId(),
     endpoint: sub.endpoint,
     p256dh: json.keys?.p256dh,
@@ -69,10 +88,25 @@ export async function enablePush() {
 export async function disablePush() {
   const sub = await getPushSubscription()
   if (!sub) return
-  const existing = await pb
-    .collection('push_subscriptions')
-    .getFirstListItem(pb.filter('endpoint = {:endpoint}', { endpoint: sub.endpoint }))
-    .catch(() => null)
+  const existing = await findRecord(sub.endpoint)
   if (existing) await pb.collection('push_subscriptions').delete(existing.id)
   await sub.unsubscribe()
+}
+
+/**
+ * Stops this device from receiving the current user's reminders. Must run
+ * while still authenticated so the server record can be deleted.
+ */
+export async function clearPushOnLogout() {
+  if (typeof navigator === 'undefined' || !('serviceWorker' in navigator)) return
+  const reg = await navigator.serviceWorker.getRegistration()
+  const sub = await reg?.pushManager.getSubscription()
+  if (!sub) return
+  const existing = await findRecord(sub.endpoint)
+  if (existing)
+    await pb
+      .collection('push_subscriptions')
+      .delete(existing.id)
+      .catch(() => {})
+  await sub.unsubscribe().catch(() => {})
 }

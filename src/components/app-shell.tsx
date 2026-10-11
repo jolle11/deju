@@ -1,8 +1,8 @@
 import { Link, useLocation, useNavigate } from '@tanstack/react-router'
 import { History, LogOut, PanelLeftClose, PanelLeftOpen, Settings, Timer } from 'lucide-react'
 import { type ReactNode, useEffect, useState } from 'react'
+import { logout } from '#/lib/auth'
 import type { MessageKey } from '#/lib/messages'
-import { pb } from '#/lib/pb'
 import { useI18n } from '#/lib/preferences'
 import { QuickPrefs } from './quick-prefs'
 
@@ -208,8 +208,8 @@ function SideNav() {
         type="button"
         aria-label={t('settings.logout')}
         {...tooltipEvents}
-        onClick={() => {
-          pb.authStore.clear()
+        onClick={async () => {
+          await logout()
           navigate({ to: '/welcome' })
         }}
         className={`group/sidebar-action relative -mt-4 flex items-center gap-3 rounded-xl py-2.5 text-left font-bold text-red-500 hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring dark:text-red-400 ${collapsed ? 'justify-center px-0' : 'px-3'}`}

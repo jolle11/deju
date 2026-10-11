@@ -5,8 +5,9 @@ import { AppShell } from '#/components/app-shell'
 import { DataSection } from '#/components/data-section'
 import { GoalPicker } from '#/components/goal-picker'
 import { PushToggle } from '#/components/push-toggle'
+import { logout } from '#/lib/auth'
 import { LOCALE_NAMES, LOCALES } from '#/lib/messages'
-import { currentUser, fasts, isLoggedIn, pb } from '#/lib/pb'
+import { currentUser, fasts, isLoggedIn } from '#/lib/pb'
 import {
   ACCENTS,
   type Accent,
@@ -71,8 +72,8 @@ function Settings() {
       await fasts().update(active.id, { targetHours: hours })
   }
 
-  function logout() {
-    pb.authStore.clear()
+  async function signOut() {
+    await logout()
     navigate({ to: '/welcome' })
   }
 
@@ -194,7 +195,7 @@ function Settings() {
             <p className="text-sm text-muted-foreground">{currentUser()?.email}</p>
             <button
               type="button"
-              onClick={logout}
+              onClick={signOut}
               className="self-start rounded-full border border-input px-5 py-2.5 font-bold text-red-500 dark:text-red-400"
             >
               {t('settings.logout')}
