@@ -1,5 +1,5 @@
 import { createFileRoute, redirect } from '@tanstack/react-router'
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { AppShell } from '#/components/app-shell'
 import { FastDialog, RATINGS } from '#/components/fast-dialog'
 import { Delayed, Skeleton } from '#/components/skeleton'
@@ -16,6 +16,9 @@ export const Route = createFileRoute('/history')({
   },
   component: History,
 })
+
+/** Fasts listed at a time; stats always use the full history. */
+const PAGE_SIZE = 20
 
 function usePastFasts() {
   const [items, setItems] = useState<Fast[] | null>(null)
@@ -39,6 +42,9 @@ function History() {
   const { targetHours } = usePrefs()
   const items = usePastFasts()
   const [editing, setEditing] = useState<Fast | null>(null)
+  const [visible, setVisible] = useState(PAGE_SIZE)
+  // Recomputed only when the fasts change, not on every render.
+  const stats = useMemo(() => computeStats(items ?? []), [items])
 
   if (!items) {
     return (
@@ -47,8 +53,6 @@ function History() {
       </AppShell>
     )
   }
-
-  const stats = computeStats(items)
 
   return (
     <AppShell title={t('history.title')}>
@@ -83,7 +87,7 @@ function History() {
           <section className="flex flex-col gap-3">
             <h2 className="font-display text-xl font-extrabold">{t('history.fasts')}</h2>
             <ul className="flex flex-col gap-2">
-              {items.map((f) => {
+              {items.slice(0, visible).map((f) => {
                 const done = isCompleted(f)
                 return (
                   <li key={f.id}>
@@ -119,6 +123,15 @@ function History() {
                 )
               })}
             </ul>
+            {items.length > visible && (
+              <button
+                type="button"
+                onClick={() => setVisible((v) => v + PAGE_SIZE)}
+                className="self-center rounded-full border border-input px-4 py-2 text-sm font-bold"
+              >
+                {t('history.showMore', { n: items.length - visible })}
+              </button>
+            )}
           </section>
         </div>
       )}
