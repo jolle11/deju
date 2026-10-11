@@ -14,7 +14,7 @@ import {
   USER_CACHE_PREFIX,
 } from '#/lib/pb'
 import { type Translate, useI18n, usePrefs } from '#/lib/preferences'
-import { durationMs, isCompleted } from '#/lib/stats'
+import { durationMs, fastLevel } from '#/lib/stats'
 import { capitalize, formatDate, formatDuration } from '#/lib/time'
 import { cn } from '#/lib/utils'
 import { type Zone, zoneAt } from '#/lib/zones'
@@ -334,7 +334,16 @@ function HomeSkeleton() {
   )
 }
 
-/** Last fasts as a strip of dots, oldest to newest; filled when the goal was met. */
+const STRIP_CLASS = {
+  goal: 'bg-[var(--lagoon)] text-white',
+  min: 'bg-[var(--lagoon)]/25 text-foreground ring-2 ring-inset ring-[var(--lagoon)]/60',
+  none: 'border-2 border-foreground/20 text-muted-foreground',
+}
+
+/**
+ * Last fasts as a strip of dots, oldest to newest: filled when the goal was
+ * met, tinted when it reached MIN_FAST_HOURS, outlined otherwise.
+ */
 function StreakStrip({ t, locale, items }: { t: Translate; locale: string; items: Fast[] }) {
   if (items.length === 0) return null
   return (
@@ -347,9 +356,7 @@ function StreakStrip({ t, locale, items }: { t: Translate; locale: string; items
         >
           <span
             className={`grid size-9 place-items-center rounded-full text-[0.65rem] font-extrabold tabular-nums ${
-              isCompleted(f)
-                ? 'bg-[var(--lagoon)] text-white'
-                : 'border-2 border-foreground/20 text-muted-foreground'
+              STRIP_CLASS[fastLevel(f) ?? 'none']
             }`}
           >
             {Math.round(durationMs(f) / 3_600_000)}

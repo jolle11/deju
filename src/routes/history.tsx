@@ -10,7 +10,14 @@ import { onCollectionChange } from '#/lib/live'
 import { type Fast, fasts, isLoggedIn } from '#/lib/pb'
 import { useI18n, usePrefs } from '#/lib/preferences'
 import { renderMonthCard, shareImage } from '#/lib/share-card'
-import { computeStats, dayKey, durationMs, isCompleted, summarizePeriod } from '#/lib/stats'
+import {
+  computeStats,
+  dayKey,
+  durationMs,
+  fastLevel,
+  MIN_FAST_HOURS,
+  summarizePeriod,
+} from '#/lib/stats'
 import { capitalize, dateFormat, formatDate, formatHours } from '#/lib/time'
 
 export const Route = createFileRoute('/history')({
@@ -19,6 +26,13 @@ export const Route = createFileRoute('/history')({
   },
   component: History,
 })
+
+/** List marker: goal met, at least MIN_FAST_HOURS, or neither. */
+const DOT_CLASS = {
+  goal: 'bg-[var(--lagoon)]',
+  min: 'bg-[var(--lagoon)]/35 ring-1 ring-[var(--lagoon)]',
+  none: 'bg-foreground/20',
+}
 
 /** Fasts listed at a time; stats always use the full history. */
 const PAGE_SIZE = 20
@@ -121,7 +135,7 @@ function History() {
             <h2 className="font-display text-xl font-extrabold">{t('history.fasts')}</h2>
             <ul className="flex flex-col gap-2">
               {items.slice(0, visible).map((f) => {
-                const done = isCompleted(f)
+                const level = fastLevel(f)
                 return (
                   <li key={f.id}>
                     <button
@@ -130,10 +144,14 @@ function History() {
                       className="flex w-full items-center gap-4 rounded-2xl border border-input px-4 py-3 text-left transition-colors hover:bg-muted/40"
                     >
                       <span
-                        className={`size-3 shrink-0 rounded-full ${done ? 'bg-[var(--lagoon)]' : 'bg-foreground/20'}`}
+                        className={`size-3 shrink-0 rounded-full ${DOT_CLASS[level ?? 'none']}`}
                       >
                         <span className="sr-only">
-                          {done ? t('history.goalMet') : t('history.goalMissed')}
+                          {level === 'goal'
+                            ? t('history.goalMet')
+                            : level === 'min'
+                              ? t('calendar.legendMin', { h: MIN_FAST_HOURS })
+                              : t('history.goalMissed')}
                         </span>
                       </span>
                       <span className="flex min-w-0 flex-1 flex-col">
