@@ -72,7 +72,11 @@ function History() {
               />
             </dl>
 
-            <WeeklyChart hoursByDay={stats.hoursByDay} goalHours={targetHours} />
+            <WeeklyChart
+              hoursByDay={stats.hoursByDay}
+              dayLevels={stats.dayLevels}
+              goalHours={targetHours}
+            />
             <MonthCalendar dayLevels={stats.dayLevels} />
           </div>
 

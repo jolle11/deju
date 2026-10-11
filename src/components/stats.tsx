@@ -13,12 +13,17 @@ function formatH(hours: number) {
   return `${hours.toFixed(1).replace('.0', '')}h`
 }
 
-/** Hours fasted per day (by end date) over the last 7 days. Single series. */
+/**
+ * Hours fasted per day (by end date) over the last 7 days. A bar is solid when
+ * that day's fast met its own goal; the dashed line is the current goal.
+ */
 export function WeeklyChart({
   hoursByDay,
+  dayLevels,
   goalHours,
 }: {
   hoursByDay: Map<string, number>
+  dayLevels: Map<string, DayLevel>
   goalHours: number
 }) {
   const { t, locale } = useI18n()
@@ -64,7 +69,10 @@ export function WeeklyChart({
                 style={{
                   height: `${(v / max) * 100}%`,
                   minHeight: v > 0 ? 4 : 0,
-                  backgroundColor: 'var(--lagoon)',
+                  backgroundColor:
+                    dayLevels.get(dayKey(days[i])) === 'goal'
+                      ? 'var(--lagoon)'
+                      : 'color-mix(in oklab, var(--lagoon) 40%, transparent)',
                   opacity: hover === null || hover === i ? 1 : 0.45,
                 }}
               />
