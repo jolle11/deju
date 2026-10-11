@@ -2,9 +2,9 @@ import { useState } from 'react'
 import { ConfirmDialog } from '#/components/confirm-dialog'
 import { Dialog } from '#/components/dialog'
 import type { MessageKey } from '#/lib/messages'
-import type { Fast } from '#/lib/pb'
+import { type Fast, findOverlap } from '#/lib/pb'
 import { type Translate, useI18n } from '#/lib/preferences'
-import { fromLocalInput, toLocalInput } from '#/lib/time'
+import { formatDate, fromLocalInput, toLocalInput } from '#/lib/time'
 
 export type FastPatch = Partial<Pick<Fast, 'startedAt' | 'endedAt' | 'note' | 'rating'>>
 
@@ -32,7 +32,7 @@ export function FastDialog({
   onSave: (patch: FastPatch) => Promise<unknown>
   onDelete?: () => Promise<unknown>
 }) {
-  const { t } = useI18n()
+  const { t, locale } = useI18n()
   const [startedAt, setStartedAt] = useState(() => toLocalInput(fast.startedAt))
   const [endedAt, setEndedAt] = useState(() => toLocalInput(fast.endedAt || Date.now()))
   const [note, setNote] = useState(fast.note ?? '')
@@ -67,6 +67,16 @@ export function FastDialog({
     setBusy(true)
     setError(null)
     try {
+      const clash = await findOverlap(
+        new Date(showStart ? startedAt : fast.startedAt),
+        new Date(showEnd ? endedAt : now),
+        fast.id,
+      )
+      if (clash) {
+        setError(t('dialog.overlap', { date: formatDate(clash.startedAt, locale) }))
+        setBusy(false)
+        return
+      }
       await onSave(patch)
       onClose()
     } catch (err) {

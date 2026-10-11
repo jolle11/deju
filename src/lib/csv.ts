@@ -192,6 +192,39 @@ export function parseFastsCsv(text: string, now = Date.now()) {
   return { rows: result, errors }
 }
 
+/** Same start minute = same fast. Used to skip rows that were already imported. */
+const minuteKey = (iso: string) => Math.floor(new Date(iso).getTime() / 60_000)
+
+type Range = { start: number; end: number }
+const toRange = (startedAt: string, endedAt: string): Range => ({
+  start: new Date(startedAt).getTime(),
+  // A running fast has no end yet.
+  end: endedAt ? new Date(endedAt).getTime() : Number.POSITIVE_INFINITY,
+})
+
+/**
+ * Splits parsed rows into the ones to import, exact duplicates (same start
+ * minute as a stored fast or an earlier row) and rows overlapping another fast.
+ */
+export function classifyImport(rows: FastRow[], existing: Pick<Fast, 'startedAt' | 'endedAt'>[]) {
+  const taken = new Set(existing.map((f) => minuteKey(f.startedAt)))
+  const ranges = existing.map((f) => toRange(f.startedAt, f.endedAt))
+  const fresh: FastRow[] = []
+  let duplicates = 0
+  let overlaps = 0
+  for (const row of rows) {
+    const range = toRange(row.startedAt, row.endedAt)
+    if (taken.has(minuteKey(row.startedAt))) duplicates++
+    else if (ranges.some((r) => r.start < range.end && range.start < r.end)) overlaps++
+    else {
+      fresh.push(row)
+      taken.add(minuteKey(row.startedAt))
+      ranges.push(range)
+    }
+  }
+  return { rows: fresh, duplicates, overlaps }
+}
+
 export function downloadFile(filename: string, content: string, type = 'text/csv;charset=utf-8') {
   const url = URL.createObjectURL(new Blob([content], { type }))
   const a = document.createElement('a')

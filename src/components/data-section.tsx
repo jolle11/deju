@@ -3,6 +3,7 @@ import { useRef, useState } from 'react'
 import {
   CSV_COLUMNS,
   type CsvError,
+  classifyImport,
   downloadFile,
   type FastRow,
   fastsToCsv,
@@ -16,15 +17,12 @@ import { type Translate, useI18n } from '#/lib/preferences'
 const REQUIRED = new Set(['startedAt', 'endedAt', 'targetHours'])
 const MAX_ERRORS_SHOWN = 8
 
-type Preview = { rows: FastRow[]; duplicates: number; errors: CsvError[] }
+type Preview = { rows: FastRow[]; duplicates: number; overlaps: number; errors: CsvError[] }
 
 function errorText(t: Translate, e: CsvError) {
   const { code, ...vars } = e
   return t(`data.err.${code}` as MessageKey, vars as Record<string, string | number>)
 }
-
-/** Same start minute = same fast. Used to skip rows that were already imported. */
-const minuteKey = (iso: string) => Math.floor(new Date(iso).getTime() / 60_000)
 
 export function DataSection() {
   const { t } = useI18n()
@@ -54,15 +52,11 @@ export function DataSection() {
     setMessage(null)
     try {
       const { rows, errors } = parseFastsCsv(await file.text())
-      const existing = await fasts().getFullList({ fields: 'startedAt', requestKey: null })
-      const taken = new Set(existing.map((f) => minuteKey(f.startedAt)))
-      const fresh = rows.filter((r) => {
-        const key = minuteKey(r.startedAt)
-        if (taken.has(key)) return false
-        taken.add(key) // also dedupe within the file
-        return true
+      const existing = await fasts().getFullList({
+        fields: 'startedAt,endedAt',
+        requestKey: null,
       })
-      setPreview({ rows: fresh, duplicates: rows.length - fresh.length, errors })
+      setPreview({ ...classifyImport(rows, existing), errors })
     } catch {
       setMessage(t('data.err.read'))
     }
@@ -185,7 +179,7 @@ function ImportPreview({
   onConfirm: () => void
   onCancel: () => void
 }) {
-  const { rows, duplicates, errors } = preview
+  const { rows, duplicates, overlaps, errors } = preview
   return (
     <div className="flex flex-col gap-3 rounded-xl bg-muted/50 p-4 text-sm">
       <p className="font-bold">
@@ -193,6 +187,9 @@ function ImportPreview({
       </p>
       {duplicates > 0 && (
         <p className="text-muted-foreground">{t('data.duplicates', { n: duplicates })}</p>
+      )}
+      {overlaps > 0 && (
+        <p className="text-muted-foreground">{t('data.overlaps', { n: overlaps })}</p>
       )}
       {errors.length > 0 && (
         <div className="flex flex-col gap-1">

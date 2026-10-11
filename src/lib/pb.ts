@@ -27,6 +27,22 @@ export type User = RecordModel & {
 export const fasts = () => pb.collection<Fast>('fasts')
 export const users = () => pb.collection<User>('users')
 
+/**
+ * First other fast whose time range intersects [start, end). A running fast
+ * has no end, so it overlaps anything that ends after it started.
+ */
+export function findOverlap(start: Date, end: Date, excludeId = '') {
+  return fasts()
+    .getList(1, 1, {
+      filter: pb.filter(
+        'id != {:excludeId} && startedAt < {:end} && (endedAt = "" || endedAt > {:start})',
+        { excludeId, start, end },
+      ),
+      requestKey: null,
+    })
+    .then((r) => r.items[0] ?? null)
+}
+
 export function currentUser() {
   return pb.authStore.record as User | null
 }
