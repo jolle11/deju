@@ -53,23 +53,32 @@ function Settings() {
   const navigate = useNavigate()
   const [error, setError] = useState<string | null>(null)
 
-  async function save(patch: Partial<Prefs>) {
+  /** Runs a save and shows its error; returns false if it failed. */
+  async function attempt(action: () => Promise<unknown>) {
     setError(null)
     try {
-      await updatePrefs(patch)
+      await action()
+      return true
     } catch (err) {
       setError(err instanceof Error ? err.message : t('common.saveError'))
+      return false
     }
   }
 
+  function save(patch: Partial<Prefs>) {
+    return attempt(() => updatePrefs(patch))
+  }
+
   async function saveGoal(hours: number) {
-    await save({ targetHours: hours })
+    if (!(await save({ targetHours: hours }))) return
     // The goal also applies to the fast in progress.
-    const active = await fasts()
-      .getFirstListItem('endedAt = ""', { requestKey: null })
-      .catch(() => null)
-    if (active && active.targetHours !== hours)
-      await fasts().update(active.id, { targetHours: hours })
+    await attempt(async () => {
+      const active = await fasts()
+        .getFirstListItem('endedAt = ""', { requestKey: null })
+        .catch(() => null)
+      if (active && active.targetHours !== hours)
+        await fasts().update(active.id, { targetHours: hours })
+    })
   }
 
   async function signOut() {
