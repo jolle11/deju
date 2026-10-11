@@ -1,3 +1,4 @@
+import { Share2 } from 'lucide-react'
 import { useState } from 'react'
 import { useI18n } from '#/lib/preferences'
 import { type DayLevel, dayKey, lastDays, MIN_FAST_HOURS, startOfDay } from '#/lib/stats'
@@ -103,7 +104,14 @@ const LEVEL_CLASS: Record<DayLevel, string> = {
  * Month grid. Solid = a fast reached its goal that day; tinted = at least
  * MIN_FAST_HOURS; unmarked = no qualifying fast. Days are the fast's end date.
  */
-export function MonthCalendar({ dayLevels }: { dayLevels: Map<string, DayLevel> }) {
+export function MonthCalendar({
+  dayLevels,
+  onShare,
+}: {
+  dayLevels: Map<string, DayLevel>
+  /** Shares a summary of the month on screen. */
+  onShare?: (month: Date) => Promise<void>
+}) {
   const { t, locale } = useI18n()
   const monthFmt = dateFormat(locale, MONTH)
   const weekdayFmt = dateFormat(locale, NARROW_DAY)
@@ -113,6 +121,8 @@ export function MonthCalendar({ dayLevels }: { dayLevels: Map<string, DayLevel> 
     return { key: i, label: weekdayFmt.format(d) }
   })
   const [offset, setOffset] = useState(0)
+  const [sharing, setSharing] = useState(false)
+  const [shareError, setShareError] = useState(false)
   const today = startOfDay(new Date())
   const first = new Date(today.getFullYear(), today.getMonth() + offset, 1)
   const daysInMonth = new Date(first.getFullYear(), first.getMonth() + 1, 0).getDate()
@@ -192,6 +202,34 @@ export function MonthCalendar({ dayLevels }: { dayLevels: Map<string, DayLevel> 
         </li>
       </ul>
       <p className="mt-2 text-xs text-muted-foreground">{t('chart.byEndDay')}</p>
+      {onShare && (
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            disabled={sharing}
+            onClick={async () => {
+              setSharing(true)
+              setShareError(false)
+              try {
+                await onShare(first)
+              } catch {
+                setShareError(true)
+              } finally {
+                setSharing(false)
+              }
+            }}
+            className="inline-flex items-center gap-2 rounded-full border border-input px-4 py-2 text-sm font-bold disabled:opacity-50"
+          >
+            <Share2 className="size-4" aria-hidden="true" />
+            {t('share.button')}
+          </button>
+          {shareError && (
+            <span role="alert" className="text-sm text-destructive">
+              {t('share.error')}
+            </span>
+          )}
+        </div>
+      )}
     </section>
   )
 }

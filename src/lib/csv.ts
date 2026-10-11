@@ -225,8 +225,13 @@ export function classifyImport(rows: FastRow[], existing: Pick<Fast, 'startedAt'
   return { rows: fresh, duplicates, overlaps }
 }
 
-export function downloadFile(filename: string, content: string, type = 'text/csv;charset=utf-8') {
-  const url = URL.createObjectURL(new Blob([content], { type }))
+export function downloadFile(
+  filename: string,
+  content: string | Blob,
+  type = 'text/csv;charset=utf-8',
+) {
+  const blob = content instanceof Blob ? content : new Blob([content], { type })
+  const url = URL.createObjectURL(blob)
   const a = document.createElement('a')
   a.href = url
   a.download = filename

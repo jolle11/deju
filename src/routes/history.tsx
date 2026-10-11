@@ -9,8 +9,9 @@ import { MonthCalendar, WeeklyChart } from '#/components/stats'
 import { onCollectionChange } from '#/lib/live'
 import { type Fast, fasts, isLoggedIn } from '#/lib/pb'
 import { useI18n, usePrefs } from '#/lib/preferences'
-import { computeStats, durationMs, isCompleted } from '#/lib/stats'
-import { capitalize, formatDate, formatHours } from '#/lib/time'
+import { renderMonthCard, shareImage } from '#/lib/share-card'
+import { computeStats, dayKey, durationMs, isCompleted, summarizePeriod } from '#/lib/stats'
+import { capitalize, dateFormat, formatDate, formatHours } from '#/lib/time'
 
 export const Route = createFileRoute('/history')({
   beforeLoad: () => {
@@ -48,6 +49,32 @@ function History() {
   // Recomputed only when the fasts change, not on every render.
   const stats = useMemo(() => computeStats(items ?? []), [items])
 
+  /** Builds the month image in the current theme and hands it to the share sheet. */
+  async function shareMonth(month: Date) {
+    const all = items ?? []
+    const next = new Date(month.getFullYear(), month.getMonth() + 1, 1)
+    const summary = summarizePeriod(all, month, next)
+    const goalDays = [...stats.dayLevels].filter(
+      ([key, level]) => level === 'goal' && key.startsWith(dayKey(month).slice(0, 8)),
+    ).length
+    const title = capitalize(dateFormat(locale, { month: 'long', year: 'numeric' }).format(month))
+    const narrow = dateFormat(locale, { weekday: 'narrow' })
+    const blob = await renderMonthCard({
+      title,
+      month,
+      dayLevels: stats.dayLevels,
+      weekdayLabels: Array.from({ length: 7 }, (_, i) => narrow.format(new Date(2024, 0, 1 + i))),
+      figures: [
+        [t('periods.fasts'), String(summary.count)],
+        [t('periods.rate'), summary.rate === null ? '–' : `${Math.round(summary.rate * 100)}%`],
+        [t('periods.average'), summary.count ? formatTileHours(summary.averageMs) : '–'],
+        [t('periods.total'), `${Math.round(summary.totalMs / 3_600_000)}h`],
+      ],
+      footer: t('share.footer', { n: goalDays }),
+    })
+    await shareImage(blob, `deju-${dayKey(month).slice(0, 7)}.png`, title)
+  }
+
   if (!items) {
     return (
       <AppShell title={t('history.title')}>
@@ -83,7 +110,7 @@ function History() {
               dayLevels={stats.dayLevels}
               goalHours={targetHours}
             />
-            <MonthCalendar dayLevels={stats.dayLevels} />
+            <MonthCalendar dayLevels={stats.dayLevels} onShare={shareMonth} />
             <MonthComparison items={items} />
             <WeeklyCompletionChart items={items} />
             <RatingChart items={items} />
