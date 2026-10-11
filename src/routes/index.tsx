@@ -129,12 +129,24 @@ function useRecentFasts() {
   }
 }
 
+/** Ticks every second while enabled and the page is visible. */
 function useNow(enabled: boolean) {
   const [now, setNow] = useState(() => Date.now())
   useEffect(() => {
     if (!enabled) return
-    const id = setInterval(() => setNow(Date.now()), 1000)
-    return () => clearInterval(id)
+    let id: ReturnType<typeof setInterval> | undefined
+    const sync = () => {
+      clearInterval(id)
+      if (document.visibilityState !== 'visible') return
+      setNow(Date.now())
+      id = setInterval(() => setNow(Date.now()), 1000)
+    }
+    sync()
+    document.addEventListener('visibilitychange', sync)
+    return () => {
+      clearInterval(id)
+      document.removeEventListener('visibilitychange', sync)
+    }
   }, [enabled])
   return now
 }
