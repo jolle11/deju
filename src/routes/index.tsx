@@ -40,6 +40,39 @@ function readRecentCache(): RecentFasts | null {
   }
 }
 
+/** An end time that could not reach the server yet (offline). */
+type PendingStop = { id: string; endedAt: string }
+
+const pendingStopKey = () => `${USER_CACHE_PREFIX}pending-stop:${currentUserId()}`
+
+function readPendingStop(): PendingStop | null {
+  try {
+    return JSON.parse(localStorage.getItem(pendingStopKey()) ?? 'null')
+  } catch {
+    return null
+  }
+}
+
+function writePendingStop(pending: PendingStop | null) {
+  if (pending) localStorage.setItem(pendingStopKey(), JSON.stringify(pending))
+  else localStorage.removeItem(pendingStopKey())
+}
+
+/** PocketBase reports network failures (offline, aborted) as status 0. */
+const isNetworkError = (err: unknown) => (err as { status?: number }).status === 0
+
+/** Sends a queued end time. Only network failures keep it queued. */
+async function flushPendingStop() {
+  const pending = readPendingStop()
+  if (!pending) return
+  try {
+    await fasts().update(pending.id, { endedAt: pending.endedAt }, { requestKey: null })
+    writePendingStop(null)
+  } catch (err) {
+    if (!isNetworkError(err)) writePendingStop(null)
+  }
+}
+
 /**
  * The running fast (if any) plus the last few finished ones. Starts from the
  * copy saved on the last visit so the screen paints instantly, then refreshes.
@@ -49,15 +82,20 @@ function useRecentFasts() {
 
   const load = useCallback(
     () =>
-      Promise.all([
-        fasts()
-          .getList(1, 1, { filter: 'endedAt = ""', sort: '-startedAt', requestKey: null })
-          .then((r) => r.items[0] ?? null),
-        fasts()
-          .getList(1, 7, { filter: 'endedAt != ""', sort: '-endedAt', requestKey: null })
-          .then((r) => r.items),
-      ])
-        .then(([active, past]) => {
+      flushPendingStop()
+        .then(() =>
+          Promise.all([
+            fasts()
+              .getList(1, 1, { filter: 'endedAt = ""', sort: '-startedAt', requestKey: null })
+              .then((r) => r.items[0] ?? null),
+            fasts()
+              .getList(1, 7, { filter: 'endedAt != ""', sort: '-endedAt', requestKey: null })
+              .then((r) => r.items),
+          ]),
+        )
+        .then(([serverActive, past]) => {
+          // A stop still queued offline wins over the server's stale copy.
+          const active = serverActive?.id === readPendingStop()?.id ? null : serverActive
           setState({ active, past })
           localStorage.setItem(recentCacheKey(), JSON.stringify({ active, past }))
         })
@@ -67,8 +105,13 @@ function useRecentFasts() {
 
   useEffect(() => {
     load()
+    window.addEventListener('online', load)
     // Keep every open device in sync.
-    return onCollectionChange('fasts', load)
+    const unsubscribe = onCollectionChange('fasts', load)
+    return () => {
+      window.removeEventListener('online', load)
+      unsubscribe()
+    }
   }, [load])
 
   /** Paint the new running fast right away; realtime/refetch confirms it. */
@@ -102,6 +145,7 @@ function Home() {
   const { fast, lastEnded, past, loading, setActive, reload } = useRecentFasts()
   const now = useNow(Boolean(fast || lastEnded))
   const [dialog, setDialog] = useState<'edit-active' | null>(null)
+  const [notice, setNotice] = useState<string | null>(null)
 
   // The fast being created, so edits made before the server answers can wait for its id.
   const pendingCreate = useRef<Promise<Fast> | null>(null)
@@ -115,12 +159,15 @@ function Home() {
       note: '',
       rating: 0,
     }
+    setNotice(null)
     setActive({ ...draft, id: '', collectionId: '', collectionName: 'fasts' } as Fast)
     const created = fasts().create<Fast>(draft)
     pendingCreate.current = created
     try {
       setActive(await created)
-    } catch {
+    } catch (err) {
+      // Otherwise another device already started one; the reload shows it.
+      if (isNetworkError(err)) setNotice(t('home.startError'))
       reload()
     } finally {
       if (pendingCreate.current === created) pendingCreate.current = null
@@ -132,10 +179,20 @@ function Home() {
     const active = fast
     const endedAt = new Date().toISOString()
     setActive(null)
+    setNotice(null)
     try {
       const id = active.id || (await pendingCreate.current)?.id
       if (!id) throw new Error(t('common.saveError'))
-      await fasts().update(id, { endedAt })
+      try {
+        await fasts().update(id, { endedAt })
+      } catch (err) {
+        if (!isNetworkError(err)) throw err
+        // Keep the real end time and send it once back online.
+        writePendingStop({ id, endedAt })
+        setNotice(t('home.stopQueued'))
+      }
+    } catch (err) {
+      setNotice(err instanceof Error ? err.message : t('common.saveError'))
     } finally {
       reload()
     }
@@ -187,6 +244,11 @@ function Home() {
           </div>
         )}
         <div className="flex w-full max-w-sm flex-col items-center gap-3">
+          {notice && (
+            <p role="alert" className="text-center text-sm font-semibold text-destructive">
+              {notice}
+            </p>
+          )}
           {fast ? (
             <>
               <button

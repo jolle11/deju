@@ -35,7 +35,8 @@ const es = {
   'welcome.f3.title': 'Historial y estadísticas',
   'welcome.f3.desc': 'Rachas, medias y todos tus ayunos de un vistazo.',
   'welcome.f4.title': 'Recordatorios',
-  'welcome.f4.desc': 'Avisos en el móvil o la tablet cuando cumples el objetivo o toca volver a ayunar.',
+  'welcome.f4.desc':
+    'Avisos en el móvil o la tablet cuando cumples el objetivo o toca volver a ayunar.',
   'onboarding.title': '¿Cuántas horas quieres ayunar?',
   'onboarding.desc': 'Elige tu objetivo. Podrás cambiarlo cuando quieras en Ajustes.',
   'onboarding.continue': 'Continuar',
@@ -54,6 +55,8 @@ const es = {
   'home.nextZoneIn': '{zone} en {t}',
   'home.recent': 'Últimos ayunos',
   'home.seeAll': 'Ver todo',
+  'home.startError': 'No se pudo empezar el ayuno. Revisa la conexión.',
+  'home.stopQueued': 'Sin conexión: el fin del ayuno se guardará al volver la red.',
 
   'zone.anabolic': 'Anabólica',
   'zone.anabolic.desc': 'Tu cuerpo digiere y almacena la energía de la última comida.',
@@ -212,7 +215,8 @@ const ca: Messages = {
   'welcome.f3.title': 'Historial i estadístiques',
   'welcome.f3.desc': 'Ratxes, mitjanes i tots els teus dejunis d’un cop d’ull.',
   'welcome.f4.title': 'Recordatoris',
-  'welcome.f4.desc': 'Avisos al mòbil o la tauleta quan assoleixes l’objectiu o toca tornar a dejunar.',
+  'welcome.f4.desc':
+    'Avisos al mòbil o la tauleta quan assoleixes l’objectiu o toca tornar a dejunar.',
   'onboarding.title': 'Quantes hores vols dejunar?',
   'onboarding.desc': 'Tria el teu objectiu. El podràs canviar quan vulguis a Ajustos.',
   'onboarding.continue': 'Continuar',
@@ -231,6 +235,8 @@ const ca: Messages = {
   'home.nextZoneIn': '{zone} en {t}',
   'home.recent': 'Últims dejunis',
   'home.seeAll': 'Veure-ho tot',
+  'home.startError': 'No s’ha pogut començar el dejuni. Revisa la connexió.',
+  'home.stopQueued': 'Sense connexió: el final del dejuni es desarà quan torni la xarxa.',
 
   'zone.anabolic': 'Anabòlica',
   'zone.anabolic.desc': 'El teu cos digereix i emmagatzema l’energia de l’últim àpat.',
@@ -386,7 +392,8 @@ const en: Messages = {
   'welcome.f3.title': 'History and stats',
   'welcome.f3.desc': 'Streaks, averages and all your fasts at a glance.',
   'welcome.f4.title': 'Reminders',
-  'welcome.f4.desc': 'Alerts on your phone or tablet when you hit your goal or it is time to fast again.',
+  'welcome.f4.desc':
+    'Alerts on your phone or tablet when you hit your goal or it is time to fast again.',
   'onboarding.title': 'How many hours do you want to fast?',
   'onboarding.desc': 'Pick your goal. You can change it anytime in Settings.',
   'onboarding.continue': 'Continue',
@@ -405,6 +412,8 @@ const en: Messages = {
   'home.nextZoneIn': '{zone} in {t}',
   'home.recent': 'Recent fasts',
   'home.seeAll': 'See all',
+  'home.startError': 'Could not start the fast. Check your connection.',
+  'home.stopQueued': 'Offline: the end of the fast will be saved once you are back online.',
 
   'zone.anabolic': 'Anabolic',
   'zone.anabolic.desc': 'Your body is digesting and storing energy from your last meal.',
