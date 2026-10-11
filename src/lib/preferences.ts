@@ -177,7 +177,7 @@ export function useI18n() {
   const messages = MESSAGES[locale]
   const t: Translate = (key, vars) => {
     let text: string = messages[key] ?? MESSAGES.es[key]
-    if (vars) for (const [k, v] of Object.entries(vars)) text = text.replace(`{${k}}`, String(v))
+    if (vars) for (const [k, v] of Object.entries(vars)) text = text.replaceAll(`{${k}}`, String(v))
     return text
   }
   return { t, locale }
