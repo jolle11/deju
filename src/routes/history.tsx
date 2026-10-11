@@ -1,6 +1,7 @@
 import { createFileRoute, redirect } from '@tanstack/react-router'
 import { useEffect, useMemo, useState } from 'react'
 import { AppShell } from '#/components/app-shell'
+import { Badges } from '#/components/badges'
 import { FastDialog, RATINGS } from '#/components/fast-dialog'
 import { MonthComparison, RatingChart, WeeklyCompletionChart } from '#/components/period-stats'
 import { Delayed, Skeleton } from '#/components/skeleton'
@@ -86,6 +87,7 @@ function History() {
             <MonthComparison items={items} />
             <WeeklyCompletionChart items={items} />
             <RatingChart items={items} />
+            <Badges stats={stats} />
           </div>
 
           <section className="flex flex-col gap-3">
