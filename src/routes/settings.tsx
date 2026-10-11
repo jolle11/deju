@@ -85,7 +85,7 @@ function Settings() {
       )}
 
       <div className="grid gap-4 lg:grid-cols-2 lg:items-start lg:gap-6">
-        <div className="flex flex-col gap-4 lg:gap-6">
+        <div className="flex min-w-0 flex-col gap-4 lg:gap-6">
           <Card title={t('settings.goal')} description={t('settings.goal.desc')}>
             <GoalPicker value={prefs.targetHours} onChange={saveGoal} />
           </Card>
@@ -110,7 +110,7 @@ function Settings() {
           <DataSection />
         </div>
 
-        <div className="flex flex-col gap-4 lg:gap-6">
+        <div className="flex min-w-0 flex-col gap-4 lg:gap-6">
           <Card title={t('settings.appearance')}>
             <div className="flex flex-col gap-2">
               <span className="text-sm font-semibold">{t('settings.theme')}</span>
