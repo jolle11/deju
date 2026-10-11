@@ -1,16 +1,18 @@
 import { type Locale, TEXTS } from './i18n.ts'
+import { ZONE_START_HOURS } from './zone-starts.ts'
 
 export type Milestone = { kind: string; hours: number; title: string; body: string }
 
 const INTERMEDIATE_HOURS = [12, 16, 18, 24, 36, 48, 72]
 
-/** Hours where a new fasting zone starts. Keep in sync with src/lib/zones.ts. */
-const ZONE_STARTS = { 16: 'fat-burning', 24: 'ketosis', 72: 'deep-ketosis' } as const
+/** Zones announced by a notification, keyed by the hour they start. */
+const NOTIFIED_ZONES = ['fat-burning', 'ketosis', 'deep-ketosis'] as const
+const ZONE_STARTS = new Map<number, (typeof NOTIFIED_ZONES)[number]>(NOTIFIED_ZONES.map((id) => [ZONE_START_HOURS[id], id]))
 
 export function milestonesFor(targetHours: number, locale: Locale = 'es'): Milestone[] {
   const tx = TEXTS[locale]
   const list: Milestone[] = INTERMEDIATE_HOURS.filter((h) => h < targetHours).map((h) => {
-    const zoneId = ZONE_STARTS[h as keyof typeof ZONE_STARTS]
+    const zoneId = ZONE_STARTS.get(h)
     const zone = zoneId ? tx.zones[zoneId] : undefined
     const remaining = tx.remaining(targetHours - h)
     return {

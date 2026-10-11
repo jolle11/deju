@@ -4,7 +4,7 @@ import { TanStackRouterDevtoolsPanel } from '@tanstack/react-router-devtools'
 import { useEffect } from 'react'
 
 import { refreshSession } from '#/lib/auth'
-import { STORAGE_KEY } from '#/lib/preferences'
+import { ACCENTS, STORAGE_KEY } from '#/lib/preferences'
 import appCss from '../styles.css?url'
 
 export const Route = createRootRoute({
@@ -40,7 +40,7 @@ export const Route = createRootRoute({
 })
 
 /** Applies the cached theme before first paint so there is no light/dark flash. */
-const THEME_BOOT_SCRIPT = `try{var p=JSON.parse(localStorage.getItem(${JSON.stringify(STORAGE_KEY)})||'{}');var t=p.theme||'system';var d=t==='dark'||t==='light'?t==='dark':matchMedia('(prefers-color-scheme: dark)').matches;var r=document.documentElement;r.classList.toggle('dark',d);var a=p.theme===''?'default':['default','lagoon','sunset','violet','forest'].includes(p.accent)?p.accent:'default';r.dataset.theme=a;r.dataset.accent=a;if(p.language)r.lang=p.language}catch(e){}`
+const THEME_BOOT_SCRIPT = `try{var p=JSON.parse(localStorage.getItem(${JSON.stringify(STORAGE_KEY)})||'{}');var t=p.theme||'system';var d=t==='dark'||t==='light'?t==='dark':matchMedia('(prefers-color-scheme: dark)').matches;var r=document.documentElement;r.classList.toggle('dark',d);var a=p.theme===''?'default':${JSON.stringify(ACCENTS)}.includes(p.accent)?p.accent:'default';r.dataset.theme=a;r.dataset.accent=a;if(p.language)r.lang=p.language}catch(e){}`
 
 function useServiceWorker() {
   useEffect(() => {
