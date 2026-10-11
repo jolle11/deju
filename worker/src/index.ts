@@ -12,9 +12,14 @@ type Fast = {
   expand?: { user?: { locale?: string } }
 }
 type PushSub = { id: string; endpoint: string; p256dh: string; auth: string }
-type LogEntry = { kind: string }
+type LogEntry = { fast: string; kind: string }
 type User = { id: string; eatingWindowHours: number; locale: string }
-type EndedFast = { id: string; endedAt: string }
+type EndedFast = { id: string; user: string; endedAt: string }
+
+/** Longest eating window allowed by the users collection. */
+const MAX_EATING_WINDOW_HOURS = 24
+/** Reminders older than this are skipped (e.g. the worker was down). */
+const STALE_REMINDER_MS = 6 * 3_600_000
 
 webpush.setVapidDetails(env.vapidSubject, env.vapidPublicKey, env.vapidPrivateKey)
 
@@ -71,17 +76,25 @@ async function tick() {
     fields: 'id,user,startedAt,targetHours,expand.user.locale',
   })
 
+  // Every log entry of the running fasts in one query instead of one per fast.
+  const logs = await pb.collection('notification_log').getFullList<LogEntry>({
+    filter: 'fast.endedAt = ""',
+    fields: 'fast,kind',
+  })
+  const sentByFast = new Map<string, Set<string>>()
+  for (const log of logs) {
+    const kinds = sentByFast.get(log.fast) ?? new Set()
+    kinds.add(log.kind)
+    sentByFast.set(log.fast, kinds)
+  }
+
   for (const fast of active) {
     const locale = toLocale(fast.expand?.user?.locale)
     const reached = reachedMilestones(new Date(fast.startedAt), fast.targetHours, now, locale)
     if (reached.length === 0) continue
 
-    const sent = await pb.collection('notification_log').getFullList<LogEntry>({
-      filter: pb.filter('fast = {:id}', { id: fast.id }),
-      fields: 'kind',
-    })
-    const sentKinds = new Set(sent.map((s) => s.kind))
-    const pending = reached.filter((m) => !sentKinds.has(m.kind))
+    const sentKinds = sentByFast.get(fast.id)
+    const pending = reached.filter((m) => !sentKinds?.has(m.kind))
     if (pending.length === 0) continue
 
     // Mark everything as handled but only notify the newest one,
@@ -101,34 +114,34 @@ async function tick() {
     }
   }
 
-  await remindNextFast(now)
+  await remindNextFast(now, new Set(active.map((f) => f.user)))
 }
 
 /** Nudges users with an eating window to start their next fast. */
-async function remindNextFast(now: Date) {
+async function remindNextFast(now: Date, fasting: Set<string>) {
   const users = await pb
     .collection('users')
     .getFullList<User>({ filter: 'eatingWindowHours > 0', fields: 'id,eatingWindowHours,locale' })
+  if (users.length === 0) return
+
+  // Only fasts ending recently can still be due: anything older is stale even
+  // with the longest window. One query covers every user.
+  const since = new Date(now.getTime() - MAX_EATING_WINDOW_HOURS * 3_600_000 - STALE_REMINDER_MS)
+  const recent = await pb.collection('fasts').getFullList<EndedFast>({
+    filter: pb.filter('endedAt != "" && endedAt >= {:since}', { since }),
+    sort: 'endedAt',
+    fields: 'id,user,endedAt',
+  })
+  const lastByUser = new Map(recent.map((f) => [f.user, f]))
 
   for (const user of users) {
-    const latest = (filter: string, sort: string) =>
-      pb
-        .collection('fasts')
-        .getList<EndedFast>(1, 1, {
-          filter: pb.filter(`user = {:id} && ${filter}`, { id: user.id }),
-          sort,
-          fields: 'id,endedAt',
-        })
-        .then((r) => r.items[0])
-
     // A fast is already running: nothing to remind.
-    if (await latest('endedAt = ""', '-startedAt')) continue
-    const last = await latest('endedAt != ""', '-endedAt')
+    if (fasting.has(user.id)) continue
+    const last = lastByUser.get(user.id)
     if (!last) continue
 
     const dueAt = new Date(last.endedAt).getTime() + user.eatingWindowHours * 3_600_000
-    // Skip if due long ago (e.g. worker was down), to avoid stale nudges.
-    if (now.getTime() < dueAt || now.getTime() - dueAt > 6 * 3_600_000) continue
+    if (now.getTime() < dueAt || now.getTime() - dueAt > STALE_REMINDER_MS) continue
 
     if (await claim(last.id, 'next-fast')) {
       await sendToUser(user.id, {
