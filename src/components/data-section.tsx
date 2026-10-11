@@ -11,11 +11,13 @@ import {
   templateCsv,
 } from '#/lib/csv'
 import type { MessageKey } from '#/lib/messages'
-import { currentUserId, fasts } from '#/lib/pb'
+import { currentUserId, fasts, pb } from '#/lib/pb'
 import { type Translate, useI18n } from '#/lib/preferences'
 
 const REQUIRED = new Set(['startedAt', 'endedAt', 'targetHours'])
 const MAX_ERRORS_SHOWN = 8
+/** Matches settings.batch.maxRequests on the server. */
+const IMPORT_BATCH_SIZE = 50
 
 type Preview = { rows: FastRow[]; duplicates: number; overlaps: number; errors: CsvError[] }
 
@@ -69,9 +71,13 @@ export function DataSection() {
     setProgress({ done: 0, total })
     let done = 0
     try {
-      for (const row of preview.rows) {
-        await fasts().create({ user, ...row }, { requestKey: null })
-        done++
+      // Each batch is atomic, so a failure never leaves a half-saved chunk.
+      for (let i = 0; i < total; i += IMPORT_BATCH_SIZE) {
+        const chunk = preview.rows.slice(i, i + IMPORT_BATCH_SIZE)
+        const batch = pb.createBatch()
+        for (const row of chunk) batch.collection('fasts').create({ user, ...row })
+        await batch.send({ requestKey: null })
+        done += chunk.length
         setProgress({ done, total })
       }
       setMessage(t('data.imported', { n: done }))
