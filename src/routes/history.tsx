@@ -2,6 +2,7 @@ import { createFileRoute, redirect } from '@tanstack/react-router'
 import { useEffect, useMemo, useState } from 'react'
 import { AppShell } from '#/components/app-shell'
 import { FastDialog, RATINGS } from '#/components/fast-dialog'
+import { MonthComparison, RatingChart, WeeklyCompletionChart } from '#/components/period-stats'
 import { Delayed, Skeleton } from '#/components/skeleton'
 import { MonthCalendar, WeeklyChart } from '#/components/stats'
 import { onCollectionChange } from '#/lib/live'
@@ -82,6 +83,9 @@ function History() {
               goalHours={targetHours}
             />
             <MonthCalendar dayLevels={stats.dayLevels} />
+            <MonthComparison items={items} />
+            <WeeklyCompletionChart items={items} />
+            <RatingChart items={items} />
           </div>
 
           <section className="flex flex-col gap-3">

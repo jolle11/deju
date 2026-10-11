@@ -88,3 +88,64 @@ export function lastDays(n: number, now = new Date()) {
   const today = startOfDay(now)
   return Array.from({ length: n }, (_, i) => addDays(today, i - n + 1))
 }
+
+export type PeriodSummary = {
+  count: number
+  completed: number
+  /** 0..1, or null with no fasts */
+  rate: number | null
+  totalMs: number
+  averageMs: number
+}
+
+/** Fasts that ended in [from, to). */
+export function summarizePeriod(items: Fast[], from: Date, to: Date): PeriodSummary {
+  const inPeriod = items.filter((f) => {
+    const end = new Date(f.endedAt).getTime()
+    return end >= from.getTime() && end < to.getTime()
+  })
+  const completed = inPeriod.filter(isCompleted).length
+  const totalMs = inPeriod.reduce((sum, f) => sum + durationMs(f), 0)
+  return {
+    count: inPeriod.length,
+    completed,
+    rate: inPeriod.length ? completed / inPeriod.length : null,
+    totalMs,
+    averageMs: inPeriod.length ? totalMs / inPeriod.length : 0,
+  }
+}
+
+/** This calendar month so far and the whole previous month. */
+export function monthComparison(items: Fast[], now = new Date()) {
+  const thisMonth = new Date(now.getFullYear(), now.getMonth(), 1)
+  const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1)
+  const nextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1)
+  return {
+    current: summarizePeriod(items, thisMonth, nextMonth),
+    previous: summarizePeriod(items, lastMonth, thisMonth),
+  }
+}
+
+/** Monday of the week containing `date`, at local midnight. */
+export function startOfWeek(date: Date | number) {
+  const d = startOfDay(date)
+  return addDays(d, -((d.getDay() + 6) % 7))
+}
+
+/** Goal completion per Monday-first week, oldest first, ending with the current week. */
+export function weeklyCompletion(items: Fast[], weeks: number, now = new Date()) {
+  const current = startOfWeek(now)
+  return Array.from({ length: weeks }, (_, i) => {
+    const from = addDays(current, (i - weeks + 1) * 7)
+    return { weekStart: from, ...summarizePeriod(items, from, addDays(from, 7)) }
+  })
+}
+
+/** Average duration of the fasts given each rating (1..5); unrated ones are left out. */
+export function durationByRating(items: Fast[]) {
+  return [1, 2, 3, 4, 5].map((rating) => {
+    const rated = items.filter((f) => f.rating === rating)
+    const totalMs = rated.reduce((sum, f) => sum + durationMs(f), 0)
+    return { rating, count: rated.length, averageMs: rated.length ? totalMs / rated.length : 0 }
+  })
+}

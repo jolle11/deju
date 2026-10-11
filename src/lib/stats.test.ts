@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vitest'
 import type { Fast } from './pb'
-import { computeStats, dayKey, isCompleted } from './stats'
+import {
+  computeStats,
+  dayKey,
+  durationByRating,
+  isCompleted,
+  monthComparison,
+  weeklyCompletion,
+} from './stats'
 
 let seq = 0
 function fast(startedAt: string, endedAt: string, targetHours = 16): Fast {
@@ -82,5 +89,57 @@ describe('computeStats', () => {
 describe('dayKey', () => {
   it('uses the local calendar day', () => {
     expect(dayKey(new Date('2026-01-04T23:30'))).toBe('2026-01-04')
+  })
+})
+
+describe('period stats', () => {
+  const now = new Date('2026-03-18T10:00') // Wednesday
+
+  it('compares this month with the previous one by end date', () => {
+    const items = [
+      fast('2026-02-27T20:00', '2026-02-28T13:00'), // Feb, met
+      fast('2026-02-28T20:00', '2026-03-01T10:00'), // ends in March, missed
+      fast('2026-03-10T20:00', '2026-03-11T14:00'), // March, met
+    ]
+    const { current, previous } = monthComparison(items, now)
+    expect(current).toMatchObject({ count: 2, completed: 1, rate: 0.5 })
+    expect(previous).toMatchObject({ count: 1, completed: 1, rate: 1 })
+    expect(current.averageMs).toBe(16 * 3_600_000)
+  })
+
+  it('reports no rate for an empty period', () => {
+    expect(monthComparison([], now).current.rate).toBeNull()
+  })
+
+  it('groups completion by Monday-first weeks ending this week', () => {
+    const weeks = weeklyCompletion(
+      [fast('2026-03-15T20:00', '2026-03-16T13:00'), fast('2026-03-08T20:00', '2026-03-09T10:00')],
+      3,
+      now,
+    )
+    expect(weeks.map((w) => dayKey(w.weekStart))).toEqual([
+      '2026-03-02',
+      '2026-03-09',
+      '2026-03-16',
+    ])
+    expect(weeks.map((w) => [w.count, w.completed])).toEqual([
+      [0, 0],
+      [1, 0],
+      [1, 1],
+    ])
+  })
+
+  it('averages duration per rating, skipping unrated fasts', () => {
+    const rated = (rating: number, end: string) => ({
+      ...fast('2026-03-01T00:00', end),
+      rating,
+    })
+    const byRating = durationByRating([
+      rated(5, '2026-03-01T18:00'),
+      rated(5, '2026-03-01T14:00'),
+      rated(0, '2026-03-01T20:00'),
+    ])
+    expect(byRating[4]).toEqual({ rating: 5, count: 2, averageMs: 16 * 3_600_000 })
+    expect(byRating[0].count).toBe(0)
   })
 })
