@@ -7,7 +7,9 @@ const INTERMEDIATE_HOURS = [12, 16, 18, 24, 36, 48, 72]
 
 /** Zones announced by a notification, keyed by the hour they start. */
 const NOTIFIED_ZONES = ['fat-burning', 'ketosis', 'deep-ketosis'] as const
-const ZONE_STARTS = new Map<number, (typeof NOTIFIED_ZONES)[number]>(NOTIFIED_ZONES.map((id) => [ZONE_START_HOURS[id], id]))
+const ZONE_STARTS = new Map<number, (typeof NOTIFIED_ZONES)[number]>(
+  NOTIFIED_ZONES.map((id) => [ZONE_START_HOURS[id], id]),
+)
 
 export function milestonesFor(targetHours: number, locale: Locale = 'es'): Milestone[] {
   const tx = TEXTS[locale]
