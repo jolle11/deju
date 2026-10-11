@@ -3,6 +3,7 @@ import { createRootRoute, HeadContent, Scripts } from '@tanstack/react-router'
 import { TanStackRouterDevtoolsPanel } from '@tanstack/react-router-devtools'
 import { useEffect } from 'react'
 
+import { refreshSession } from '#/lib/auth'
 import { STORAGE_KEY } from '#/lib/preferences'
 import appCss from '../styles.css?url'
 
@@ -48,8 +49,21 @@ function useServiceWorker() {
   }, [])
 }
 
+/** Keeps the session and synced preferences fresh while the app is open. */
+function useSessionRefresh() {
+  useEffect(() => {
+    refreshSession(true)
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') refreshSession()
+    }
+    document.addEventListener('visibilitychange', onVisible)
+    return () => document.removeEventListener('visibilitychange', onVisible)
+  }, [])
+}
+
 function RootDocument({ children }: { children: React.ReactNode }) {
   useServiceWorker()
+  useSessionRefresh()
 
   return (
     // The inline script below adjusts class/lang/data-accent before hydration.
