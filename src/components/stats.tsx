@@ -191,6 +191,7 @@ export function MonthCalendar({ dayLevels }: { dayLevels: Map<string, DayLevel> 
           {t('calendar.legendMin', { h: MIN_FAST_HOURS })}
         </li>
       </ul>
+      <p className="mt-2 text-xs text-muted-foreground">{t('chart.byEndDay')}</p>
     </section>
   )
 }
