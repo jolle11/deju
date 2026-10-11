@@ -249,6 +249,10 @@ function Home() {
             />
           )}
         </ProgressRing>
+        {/* Announces milestones to screen readers; the ticking timer itself stays silent. */}
+        <p aria-live="polite" className="sr-only">
+          {fast && (progress >= 1 ? t('home.goalReached') : t(`zone.${zone.id}`))}
+        </p>
         <StreakStrip t={t} locale={locale} items={past} />
         {fast && (
           <div className="w-full max-w-sm">
