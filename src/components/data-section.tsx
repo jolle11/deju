@@ -95,7 +95,7 @@ export function DataSection() {
     'inline-flex items-center gap-2 rounded-full border border-input px-4 py-2 text-sm font-bold disabled:opacity-50'
 
   return (
-    <section className="flex flex-col gap-4 rounded-2xl border border-input p-4 lg:p-6">
+    <section className="flex min-w-0 flex-col gap-4 rounded-2xl border border-input p-4 lg:p-6">
       <div>
         <h2 className="font-display text-lg font-extrabold">{t('data.title')}</h2>
         <p className="text-sm text-muted-foreground">{t('data.desc')}</p>
@@ -140,33 +140,22 @@ export function DataSection() {
         <summary className="cursor-pointer font-bold">{t('data.format')}</summary>
         <div className="mt-3 flex flex-col gap-3">
           <p className="text-muted-foreground">{t('data.formatIntro')}</p>
-          <div className="overflow-x-auto">
-            <table className="w-full text-left">
-              <thead className="text-xs uppercase tracking-wider text-muted-foreground">
-                <tr>
-                  <th className="py-1 pr-3">{t('data.col.name')}</th>
-                  <th className="py-1 pr-3">{t('data.col.required')}</th>
-                  <th className="py-1">{t('data.col.desc')}</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-input">
-                {CSV_COLUMNS.map((c) => (
-                  <tr key={c}>
-                    <td className="py-2 pr-3 align-top">
-                      <code>{c}</code>
-                    </td>
-                    <td className="py-2 pr-3 align-top">
-                      {REQUIRED.has(c) ? t('data.yes') : t('data.no')}
-                    </td>
-                    <td className="py-2 align-top text-muted-foreground">
-                      {t(`data.col.${c}` as MessageKey)}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          <pre className="overflow-x-auto rounded-lg bg-muted/60 p-3 text-xs">
+          <ul className="divide-y divide-input">
+            {CSV_COLUMNS.map((c) => (
+              <li key={c} className="flex flex-col gap-1 py-2">
+                <div className="flex items-center gap-2">
+                  <code>{c}</code>
+                  {REQUIRED.has(c) && (
+                    <span className="text-xs uppercase tracking-wider text-muted-foreground">
+                      {t('data.col.required')}
+                    </span>
+                  )}
+                </div>
+                <p className="text-muted-foreground">{t(`data.col.${c}` as MessageKey)}</p>
+              </li>
+            ))}
+          </ul>
+          <pre className="max-w-full overflow-x-auto rounded-lg bg-muted/60 p-3 text-xs">
             {templateCsv(t('data.templateNote')).replace(/^﻿/, '').trim()}
           </pre>
           <button
