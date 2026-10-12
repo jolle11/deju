@@ -162,20 +162,10 @@ function Settings() {
                 options={ACCENTS.map((accent) => ({
                   value: accent,
                   label: t(`settings.accent.${accent}`),
+                  leading: <AccentSwatch accent={accent} />,
                 }))}
                 value={prefs.accent}
                 onChange={(accent) => save({ accent })}
-                leading={
-                  prefs.accent === 'default' ? (
-                    <Contrast className="size-6 text-muted-foreground" aria-hidden="true" />
-                  ) : (
-                    <span
-                      className="size-6 rounded-full"
-                      style={{ backgroundColor: ACCENT_SWATCH[prefs.accent] }}
-                      aria-hidden="true"
-                    />
-                  )
-                }
               />
             </div>
           </Card>
@@ -227,5 +217,17 @@ function Card({
       )}
       {children}
     </section>
+  )
+}
+
+function AccentSwatch({ accent }: { accent: Accent }) {
+  return accent === 'default' ? (
+    <Contrast className="size-6 text-muted-foreground" aria-hidden="true" />
+  ) : (
+    <span
+      className="size-6 rounded-full"
+      style={{ backgroundColor: ACCENT_SWATCH[accent] }}
+      aria-hidden="true"
+    />
   )
 }
