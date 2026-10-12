@@ -1,7 +1,10 @@
 import { useState } from 'react'
+import { Select } from '#/components/select'
 import { useI18n } from '#/lib/preferences'
 
 const GOAL_OPTIONS = [12, 13, 14, 16, 18, 20, 24, 36]
+/** Sentinel option value for "custom". */
+const CUSTOM = -1
 
 export function GoalPicker({ value, onChange }: { value: number; onChange: (h: number) => void }) {
   const { t } = useI18n()
@@ -17,42 +20,20 @@ export function GoalPicker({ value, onChange }: { value: number; onChange: (h: n
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="flex flex-wrap gap-2" role="radiogroup">
-        {GOAL_OPTIONS.map((h) => {
-          const selected = !custom && h === value
-          return (
-            // biome-ignore lint/a11y/useSemanticElements: styled chip group
-            <button
-              key={h}
-              type="button"
-              role="radio"
-              aria-checked={selected}
-              onClick={() => {
-                setCustom(false)
-                setDraft(String(h))
-                onChange(h)
-              }}
-              className={`rounded-full border px-4 py-1.5 text-sm font-bold ${
-                selected ? 'border-primary bg-primary text-primary-foreground' : 'border-input'
-              }`}
-            >
-              {h}h
-            </button>
-          )
-        })}
-        {/* biome-ignore lint/a11y/useSemanticElements: styled chip group */}
-        <button
-          type="button"
-          role="radio"
-          aria-checked={custom}
-          onClick={() => setCustom(true)}
-          className={`rounded-full border px-4 py-1.5 text-sm font-bold ${
-            custom ? 'border-primary bg-primary text-primary-foreground' : 'border-input'
-          }`}
-        >
-          {t('settings.goal.custom')}
-        </button>
-      </div>
+      <Select
+        label={t('settings.goal')}
+        options={[
+          ...GOAL_OPTIONS.map((h) => ({ value: h, label: `${h}h` })),
+          { value: CUSTOM, label: t('settings.goal.custom') },
+        ]}
+        value={custom ? CUSTOM : value}
+        onChange={(h) => {
+          if (h === CUSTOM) return setCustom(true)
+          setCustom(false)
+          setDraft(String(h))
+          onChange(h)
+        }}
+      />
       {custom && (
         <label className="flex items-center gap-2 text-sm font-semibold">
           <input

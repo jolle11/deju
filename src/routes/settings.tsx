@@ -5,6 +5,7 @@ import { AppShell } from '#/components/app-shell'
 import { DataSection } from '#/components/data-section'
 import { GoalPicker } from '#/components/goal-picker'
 import { PushToggle } from '#/components/push-toggle'
+import { Select } from '#/components/select'
 import { logout } from '#/lib/auth'
 import { LOCALE_NAMES, LOCALES } from '#/lib/messages'
 import { currentUser, fasts, isLoggedIn } from '#/lib/pb'
@@ -101,7 +102,8 @@ function Settings() {
           </Card>
 
           <Card title={t('settings.eatingWindow')} description={t('settings.eatingWindow.desc')}>
-            <Chips
+            <Select
+              label={t('settings.eatingWindow')}
               options={WINDOW_OPTIONS.map((h) => ({
                 value: h,
                 label: h === 0 ? t('settings.eatingWindow.off') : `${h}h`,
@@ -155,42 +157,32 @@ function Settings() {
 
             <div className="flex flex-col gap-2">
               <span className="text-sm font-semibold">{t('settings.accent')}</span>
-              <div
-                className="flex flex-wrap gap-3"
-                role="radiogroup"
-                aria-label={t('settings.accent')}
-              >
-                {ACCENTS.map((accent) => {
-                  const selected = prefs.accent === accent
-                  return (
-                    // biome-ignore lint/a11y/useSemanticElements: styled swatch picker
-                    <button
-                      key={accent}
-                      type="button"
-                      role="radio"
-                      aria-checked={selected}
-                      onClick={() => save({ accent })}
-                      className="flex items-center gap-2 rounded-full border border-input py-1.5 pr-4 pl-1.5 text-sm font-bold aria-checked:border-foreground"
-                    >
-                      {accent === 'default' ? (
-                        <Contrast className="size-6 text-muted-foreground" aria-hidden="true" />
-                      ) : (
-                        <span
-                          className="size-6 rounded-full"
-                          style={{ backgroundColor: ACCENT_SWATCH[accent] }}
-                          aria-hidden="true"
-                        />
-                      )}
-                      {t(`settings.accent.${accent}`)}
-                    </button>
+              <Select
+                label={t('settings.accent')}
+                options={ACCENTS.map((accent) => ({
+                  value: accent,
+                  label: t(`settings.accent.${accent}`),
+                }))}
+                value={prefs.accent}
+                onChange={(accent) => save({ accent })}
+                leading={
+                  prefs.accent === 'default' ? (
+                    <Contrast className="size-6 text-muted-foreground" aria-hidden="true" />
+                  ) : (
+                    <span
+                      className="size-6 rounded-full"
+                      style={{ backgroundColor: ACCENT_SWATCH[prefs.accent] }}
+                      aria-hidden="true"
+                    />
                   )
-                })}
-              </div>
+                }
+              />
             </div>
           </Card>
 
           <Card title={t('settings.language')}>
-            <Chips
+            <Select
+              label={t('settings.language')}
               options={[
                 { value: '' as const, label: t('settings.language.auto') },
                 ...LOCALES.map((l) => ({ value: l, label: LOCALE_NAMES[l] })),
@@ -235,35 +227,5 @@ function Card({
       )}
       {children}
     </section>
-  )
-}
-
-function Chips<T extends string | number>({
-  options,
-  value,
-  onChange,
-}: {
-  options: { value: T; label: string }[]
-  value: T
-  onChange: (value: T) => void
-}) {
-  return (
-    <div className="flex flex-wrap gap-2" role="radiogroup">
-      {options.map((o) => (
-        // biome-ignore lint/a11y/useSemanticElements: styled chip group
-        <button
-          key={String(o.value)}
-          type="button"
-          role="radio"
-          aria-checked={o.value === value}
-          onClick={() => onChange(o.value)}
-          className={`rounded-full border px-4 py-1.5 text-sm font-bold ${
-            o.value === value ? 'border-primary bg-primary text-primary-foreground' : 'border-input'
-          }`}
-        >
-          {o.label}
-        </button>
-      ))}
-    </div>
   )
 }
