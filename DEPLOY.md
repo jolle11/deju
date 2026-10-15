@@ -12,7 +12,7 @@ Un proyecto de Railway con tres servicios desde este repo:
 >
 > La migración `1760200000_trusted_proxy.js` configura *Trusted proxy* (`X-Real-IP`, `X-Forwarded-For`). Sin ella PocketBase ve la IP del proxy de Railway, que cambia en cada petición, y el realtime falla con `400 Invalid realtime client`. No la quites en Settings → Application.
 
-Configura los "Watch paths" de cada servicio (`/pocketbase/**`, `/worker/**`, y el resto para frontend) para no redeployar todo en cada push.
+Los "Watch paths" de cada servicio están en su `railway.json` (`watchPatterns`), así un push solo redeploya el servicio que cambia.
 
 ## Variables
 

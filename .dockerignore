@@ -1,0 +1,9 @@
+node_modules
+.output
+.tanstack
+.nitro
+.git
+.env
+*.local
+pocketbase
+worker

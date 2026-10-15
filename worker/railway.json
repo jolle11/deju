@@ -1,5 +1,13 @@
 {
   "$schema": "https://railway.com/railway.schema.json",
-  "build": { "builder": "DOCKERFILE", "dockerfilePath": "Dockerfile" },
-  "deploy": { "restartPolicyType": "ALWAYS" }
+  "build": {
+    "builder": "DOCKERFILE",
+    "dockerfilePath": "Dockerfile",
+    "watchPatterns": [
+      "/worker/**"
+    ]
+  },
+  "deploy": {
+    "restartPolicyType": "ALWAYS"
+  }
 }
