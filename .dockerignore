@@ -1,4 +1,4 @@
-node_modules
+**/node_modules
 .output
 .tanstack
 .nitro
@@ -6,4 +6,3 @@ node_modules
 .env
 *.local
 pocketbase
-worker

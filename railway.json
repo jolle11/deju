@@ -3,7 +3,16 @@
   "build": {
     "builder": "DOCKERFILE",
     "dockerfilePath": "Dockerfile",
-    "watchPatterns": ["/**", "!/pocketbase/**", "!/worker/**", "!**/*.md"]
+    "watchPatterns": [
+      "/**",
+      "!/pocketbase/**",
+      "!/worker/**",
+      "/worker/src/zone-starts.ts",
+      "!**/*.md"
+    ]
   },
-  "deploy": { "healthcheckPath": "/", "restartPolicyType": "ON_FAILURE" }
+  "deploy": {
+    "healthcheckPath": "/",
+    "restartPolicyType": "ON_FAILURE"
+  }
 }
