@@ -1,6 +1,6 @@
 import { createFileRoute, redirect, useNavigate } from '@tanstack/react-router'
 import { Contrast, Monitor, Moon, Sun } from 'lucide-react'
-import { type ReactNode, useState } from 'react'
+import { type ReactNode, useEffect, useRef, useState } from 'react'
 import { AppShell } from '#/components/app-shell'
 import { DataSection } from '#/components/data-section'
 import { GoalPicker } from '#/components/goal-picker'
@@ -29,6 +29,7 @@ const ACCENT_SWATCH: Record<Accent, string> = {
   sunset: '#e0662f',
   violet: '#7c5cff',
   forest: '#2f8a4f',
+  custom: '',
 }
 
 const THEME_OPTIONS: {
@@ -162,11 +163,18 @@ function Settings() {
                 options={ACCENTS.map((accent) => ({
                   value: accent,
                   label: t(`settings.accent.${accent}`),
-                  leading: <AccentSwatch accent={accent} />,
+                  leading: <AccentSwatch accent={accent} customColor={prefs.customColor} />,
                 }))}
                 value={prefs.accent}
                 onChange={(accent) => save({ accent })}
               />
+              {prefs.accent === 'custom' && (
+                <CustomColorPicker
+                  value={prefs.customColor}
+                  label={t('settings.accent.customColor')}
+                  onChange={(customColor) => save({ customColor })}
+                />
+              )}
             </div>
           </Card>
 
@@ -220,13 +228,49 @@ function Card({
   )
 }
 
-function AccentSwatch({ accent }: { accent: Accent }) {
+/** Previews while dragging and only persists once the color settles. */
+function CustomColorPicker({
+  value,
+  label,
+  onChange,
+}: {
+  value: string
+  label: string
+  onChange: (color: string) => void
+}) {
+  const [draft, setDraft] = useState(value)
+  const timer = useRef<ReturnType<typeof setTimeout>>(undefined)
+  useEffect(() => setDraft(value), [value])
+  useEffect(() => () => clearTimeout(timer.current), [])
+
+  function pick(color: string) {
+    setDraft(color)
+    document.documentElement.style.setProperty('--custom-accent', color)
+    clearTimeout(timer.current)
+    timer.current = setTimeout(() => onChange(color), 400)
+  }
+
+  return (
+    <label className="flex items-center gap-3 rounded-xl border border-input px-3 py-2 text-sm font-semibold">
+      <input
+        type="color"
+        value={draft}
+        onChange={(e) => pick(e.target.value)}
+        className="size-8 cursor-pointer rounded-full border-0 bg-transparent p-0"
+      />
+      <span className="flex-1">{label}</span>
+      <span className="font-mono text-muted-foreground uppercase">{draft}</span>
+    </label>
+  )
+}
+
+function AccentSwatch({ accent, customColor }: { accent: Accent; customColor: string }) {
   return accent === 'default' ? (
     <Contrast className="size-6 text-muted-foreground" aria-hidden="true" />
   ) : (
     <span
       className="size-6 rounded-full"
-      style={{ backgroundColor: ACCENT_SWATCH[accent] }}
+      style={{ backgroundColor: accent === 'custom' ? customColor : ACCENT_SWATCH[accent] }}
       aria-hidden="true"
     />
   )

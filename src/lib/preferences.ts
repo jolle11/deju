@@ -4,7 +4,7 @@ import { currentUser, pb, users } from './pb'
 
 export const THEMES = ['system', 'light', 'dark'] as const
 export type ThemePref = (typeof THEMES)[number]
-export const ACCENTS = ['default', 'lagoon', 'sunset', 'violet', 'forest'] as const
+export const ACCENTS = ['default', 'lagoon', 'sunset', 'violet', 'forest', 'custom'] as const
 export type Accent = (typeof ACCENTS)[number]
 
 export type Prefs = {
@@ -13,17 +13,24 @@ export type Prefs = {
   /** Appearance mode, independent of the selected palette. */
   theme: ThemePref
   accent: Accent
+  /** Base color used when accent is 'custom'. */
+  customColor: string
   targetHours: number
   /** 0 = no next-fast reminder */
   eatingWindowHours: number
 }
 
 export const DEFAULT_TARGET_HOURS = 16
+export const DEFAULT_CUSTOM_COLOR = '#d6336c'
+
+export const isHexColor = (v: unknown): v is string =>
+  typeof v === 'string' && /^#[0-9a-f]{6}$/i.test(v)
 
 export const DEFAULT_PREFS: Prefs = {
   language: '',
   theme: 'system',
   accent: 'default',
+  customColor: DEFAULT_CUSTOM_COLOR,
   targetHours: DEFAULT_TARGET_HOURS,
   eatingWindowHours: 0,
 }
@@ -43,6 +50,7 @@ function sanitize(raw: Partial<Record<keyof Prefs, unknown>> | null | undefined)
         : ACCENTS.includes(r.accent as Accent)
           ? (r.accent as Accent)
           : 'default',
+    customColor: isHexColor(r.customColor) ? r.customColor.toLowerCase() : DEFAULT_CUSTOM_COLOR,
     targetHours: Number(r.targetHours) > 0 ? Number(r.targetHours) : DEFAULT_TARGET_HOURS,
     eatingWindowHours: Number(r.eatingWindowHours) > 0 ? Number(r.eatingWindowHours) : 0,
   }
@@ -108,7 +116,12 @@ export async function updatePrefs(patch: Partial<Prefs>) {
   const user = currentUser()
   if (!user) return
   try {
-    await users().update(user.id, { ...patch, theme: prefs.theme, accent: prefs.accent })
+    await users().update(user.id, {
+      ...patch,
+      theme: prefs.theme,
+      accent: prefs.accent,
+      customColor: prefs.customColor,
+    })
     syncResolvedLocale()
   } catch (err) {
     emit(previous)
@@ -130,6 +143,9 @@ function applyToDocument() {
   root.classList.toggle('dark', dark)
   root.dataset.theme = prefs.accent
   root.dataset.accent = prefs.accent
+  // The custom palette is derived from this base color in styles.css.
+  if (prefs.accent === 'custom') root.style.setProperty('--custom-accent', prefs.customColor)
+  else root.style.removeProperty('--custom-accent')
   root.lang = resolveLocale(prefs.language)
   // Tint the browser/OS chrome to match the background.
   const color = getComputedStyle(root).getPropertyValue('--bg-base').trim()

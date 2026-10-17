@@ -48,6 +48,18 @@
   --lagoon: #2f8a4f;
   --lagoon-deep: #226b3c;
 }
+:root[data-accent='custom'] {
+  --custom-accent: #d6336c;
+  --lagoon: var(--custom-accent);
+  --lagoon-deep: var(--custom-accent);
+}
+@supports (color: oklch(from red l c h)) {
+:root[data-accent='custom'] {
+  /* Clamp lightness so any picked color stays legible on light surfaces. */
+  --lagoon: oklch(from var(--custom-accent) clamp(0.5, l, 0.66) min(c, 0.2) h);
+  --lagoon-deep: oklch(from var(--custom-accent) clamp(0.38, l, 0.5) min(c, 0.18) h);
+}
+}
 .dark[data-accent='sunset'] {
   --lagoon: #ff9a5c;
   --lagoon-deep: #ffbb8a;
@@ -59,6 +71,12 @@
 .dark[data-accent='forest'] {
   --lagoon: #6ec89a;
   --lagoon-deep: #9edcb8;
+}
+@supports (color: oklch(from red l c h)) {
+.dark[data-accent='custom'] {
+  --lagoon: oklch(from var(--custom-accent) clamp(0.72, l, 0.82) min(c, 0.17) h);
+  --lagoon-deep: oklch(from var(--custom-accent) clamp(0.82, l, 0.9) min(c, 0.12) h);
+}
 }
 
 /* Surfaces and decorative colors follow the selected accent. */

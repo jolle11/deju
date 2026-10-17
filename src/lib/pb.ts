@@ -21,6 +21,8 @@ export type User = RecordModel & {
   locale: string
   theme: string
   accent: string
+  /** Base color for the custom accent, "#rrggbb". */
+  customColor: string
   targetHours: number
 }
 
