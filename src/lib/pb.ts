@@ -8,8 +8,6 @@ export type Fast = RecordModel & {
   endedAt: string
   targetHours: number
   note: string
-  /** 0 = not rated, 1..5 */
-  rating: number
 }
 
 export type User = RecordModel & {

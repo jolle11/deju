@@ -2,8 +2,8 @@ import { createFileRoute, redirect } from '@tanstack/react-router'
 import { useEffect, useMemo, useState } from 'react'
 import { AppShell } from '#/components/app-shell'
 import { Badges } from '#/components/badges'
-import { FastDialog, RATINGS } from '#/components/fast-dialog'
-import { MonthComparison, RatingChart, WeeklyCompletionChart } from '#/components/period-stats'
+import { FastDialog } from '#/components/fast-dialog'
+import { MonthComparison, WeeklyCompletionChart } from '#/components/period-stats'
 import { Delayed, Skeleton } from '#/components/skeleton'
 import { MonthCalendar, WeeklyChart } from '#/components/stats'
 import { onCollectionChange } from '#/lib/live'
@@ -127,7 +127,6 @@ function History() {
             <MonthCalendar dayLevels={stats.dayLevels} onShare={shareMonth} />
             <MonthComparison items={items} />
             <WeeklyCompletionChart items={items} />
-            <RatingChart items={items} />
             <Badges stats={stats} />
           </div>
 
@@ -157,7 +156,6 @@ function History() {
                       <span className="flex min-w-0 flex-1 flex-col">
                         <span className="text-sm font-semibold text-muted-foreground">
                           {capitalize(formatDate(f.startedAt, locale))}
-                          {f.rating > 0 && ` · ${RATINGS[f.rating - 1]}`}
                         </span>
                         {f.note && <span className="truncate text-sm">{f.note}</span>}
                       </span>

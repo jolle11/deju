@@ -7,10 +7,9 @@ import type { Fast } from './pb'
  *   startedAt   required  "YYYY-MM-DD HH:MM" local time, or ISO 8601
  *   endedAt     required  same format, after startedAt
  *   targetHours required  whole number 1–168
- *   rating      optional  0–5 (0 or empty = not rated)
  *   note        optional  up to 500 characters
  */
-export const CSV_COLUMNS = ['startedAt', 'endedAt', 'targetHours', 'rating', 'note'] as const
+export const CSV_COLUMNS = ['startedAt', 'endedAt', 'targetHours', 'note'] as const
 type Column = (typeof CSV_COLUMNS)[number]
 const REQUIRED: Column[] = ['startedAt', 'endedAt', 'targetHours']
 
@@ -18,7 +17,6 @@ export type FastRow = {
   startedAt: string
   endedAt: string
   targetHours: number
-  rating: number
   note: string
 }
 
@@ -29,7 +27,6 @@ export type CsvError =
   | { code: 'endBeforeStart'; line: number }
   | { code: 'inFuture'; line: number }
   | { code: 'invalidTarget'; line: number; value: string }
-  | { code: 'invalidRating'; line: number; value: string }
   | { code: 'noteTooLong'; line: number }
 
 // --- generic CSV -------------------------------------------------------------
@@ -125,7 +122,6 @@ export function fastsToCsv(items: Fast[]) {
       formatCsvDate(f.startedAt),
       f.endedAt ? formatCsvDate(f.endedAt) : '',
       f.targetHours,
-      f.rating || '',
       f.note ?? '',
     ]),
   ])
@@ -134,8 +130,8 @@ export function fastsToCsv(items: Fast[]) {
 export function templateCsv(exampleNote: string) {
   return toCsv([
     [...CSV_COLUMNS],
-    ['2026-01-05 20:30', '2026-01-06 12:45', 16, 4, exampleNote],
-    ['2026-01-06 21:00', '2026-01-07 11:00', 13, '', ''],
+    ['2026-01-05 20:30', '2026-01-06 12:45', 16, exampleNote],
+    ['2026-01-06 21:00', '2026-01-07 11:00', 13, ''],
   ])
 }
 
@@ -177,16 +173,11 @@ export function parseFastsCsv(text: string, now = Date.now()) {
     if (!Number.isInteger(targetHours) || targetHours < 1 || targetHours > 168)
       rowErrors.push({ code: 'invalidTarget', line, value: targetRaw })
 
-    const ratingRaw = get('rating')
-    const rating = ratingRaw === '' ? 0 : Number(ratingRaw)
-    if (!Number.isInteger(rating) || rating < 0 || rating > 5)
-      rowErrors.push({ code: 'invalidRating', line, value: ratingRaw })
-
     const note = get('note')
     if (note.length > 500) rowErrors.push({ code: 'noteTooLong', line })
 
     if (rowErrors.length) errors.push(...rowErrors)
-    else if (startedAt && endedAt) result.push({ startedAt, endedAt, targetHours, rating, note })
+    else if (startedAt && endedAt) result.push({ startedAt, endedAt, targetHours, note })
   })
 
   return { rows: result, errors }

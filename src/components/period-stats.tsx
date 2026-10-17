@@ -1,14 +1,8 @@
 import { useState } from 'react'
-import { RATINGS } from '#/components/fast-dialog'
 import type { MessageKey } from '#/lib/messages'
 import type { Fast } from '#/lib/pb'
 import { useI18n } from '#/lib/preferences'
-import {
-  durationByRating,
-  monthComparison,
-  type PeriodSummary,
-  weeklyCompletion,
-} from '#/lib/stats'
+import { monthComparison, type PeriodSummary, weeklyCompletion } from '#/lib/stats'
 import { dateFormat } from '#/lib/time'
 
 const WEEKS = 8
@@ -67,15 +61,7 @@ type Bar = {
  * Single-series bar chart in the same style as the weekly hours chart: the
  * header shows the hovered (or last) bar, every bar is a focusable target.
  */
-function BarChart({
-  title,
-  bars,
-  axisClassName = 'text-xs',
-}: {
-  title: string
-  bars: Bar[]
-  axisClassName?: string
-}) {
+function BarChart({ title, bars }: { title: string; bars: Bar[] }) {
   const [hover, setHover] = useState<number | null>(null)
   const active = bars[hover ?? bars.length - 1]
 
@@ -115,7 +101,7 @@ function BarChart({
         {bars.map((bar) => (
           <span
             key={bar.key}
-            className={`flex-1 text-center font-bold text-muted-foreground tabular-nums ${axisClassName}`}
+            className="flex-1 text-center text-xs font-bold text-muted-foreground tabular-nums"
           >
             {bar.axis}
           </span>
@@ -143,28 +129,4 @@ export function WeeklyCompletionChart({ items }: { items: Fast[] }) {
     }
   })
   return <BarChart title={t('periods.weekly')} bars={bars} />
-}
-
-/** Average fast duration for each "how did you feel" rating. */
-export function RatingChart({ items }: { items: Fast[] }) {
-  const { t } = useI18n()
-  const byRating = durationByRating(items)
-  const max = Math.max(...byRating.map((r) => r.averageMs))
-  if (max === 0) {
-    return (
-      <section className="rounded-2xl border border-input p-4">
-        <h2 className="font-display text-lg font-extrabold">{t('periods.byRating')}</h2>
-        <p className="mt-1 text-sm text-muted-foreground">{t('periods.noRatings')}</p>
-      </section>
-    )
-  }
-  const bars = byRating.map((r) => ({
-    key: String(r.rating),
-    axis: RATINGS[r.rating - 1],
-    ratio: r.averageMs / max,
-    detail: `${RATINGS[r.rating - 1]} ${t(`rating.${r.rating}` as MessageKey)} · ${
-      r.count ? t('periods.ratingValue', { n: r.count, h: formatH(r.averageMs) }) : '–'
-    }`,
-  }))
-  return <BarChart title={t('periods.byRating')} bars={bars} axisClassName="text-lg" />
 }

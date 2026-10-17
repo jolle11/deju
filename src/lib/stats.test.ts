@@ -1,13 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Fast } from './pb'
-import {
-  computeStats,
-  dayKey,
-  durationByRating,
-  isCompleted,
-  monthComparison,
-  weeklyCompletion,
-} from './stats'
+import { computeStats, dayKey, isCompleted, monthComparison, weeklyCompletion } from './stats'
 
 let seq = 0
 function fast(startedAt: string, endedAt: string, targetHours = 16): Fast {
@@ -21,7 +14,6 @@ function fast(startedAt: string, endedAt: string, targetHours = 16): Fast {
     endedAt: new Date(endedAt).toISOString(),
     targetHours,
     note: '',
-    rating: 0,
   }
 }
 
@@ -127,19 +119,5 @@ describe('period stats', () => {
       [1, 0],
       [1, 1],
     ])
-  })
-
-  it('averages duration per rating, skipping unrated fasts', () => {
-    const rated = (rating: number, end: string) => ({
-      ...fast('2026-03-01T00:00', end),
-      rating,
-    })
-    const byRating = durationByRating([
-      rated(5, '2026-03-01T18:00'),
-      rated(5, '2026-03-01T14:00'),
-      rated(0, '2026-03-01T20:00'),
-    ])
-    expect(byRating[4]).toEqual({ rating: 5, count: 2, averageMs: 16 * 3_600_000 })
-    expect(byRating[0].count).toBe(0)
   })
 })

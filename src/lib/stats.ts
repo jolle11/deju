@@ -141,15 +141,6 @@ export function weeklyCompletion(items: Fast[], weeks: number, now = new Date())
   })
 }
 
-/** Average duration of the fasts given each rating (1..5); unrated ones are left out. */
-export function durationByRating(items: Fast[]) {
-  return [1, 2, 3, 4, 5].map((rating) => {
-    const rated = items.filter((f) => f.rating === rating)
-    const totalMs = rated.reduce((sum, f) => sum + durationMs(f), 0)
-    return { rating, count: rated.length, averageMs: rated.length ? totalMs / rated.length : 0 }
-  })
-}
-
 /** How a single fast went: its own goal, at least MIN_FAST_HOURS, or neither. */
 export function fastLevel(f: Fast): DayLevel | null {
   if (isCompleted(f)) return 'goal'

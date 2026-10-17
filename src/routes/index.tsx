@@ -169,7 +169,6 @@ function Home() {
       endedAt: '',
       targetHours,
       note: '',
-      rating: 0,
     }
     setNotice(null)
     setActive({ ...draft, id: '', collectionId: '', collectionName: 'fasts' } as Fast)

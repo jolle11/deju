@@ -36,17 +36,16 @@ describe('parseFastsCsv', () => {
 
   it('reports every invalid row with its line number', () => {
     const csv = [
-      'startedAt,endedAt,targetHours,rating',
-      '2026-01-05 20:00,2026-01-06 12:00,16,4',
-      '2026-01-06 20:00,2026-01-06 10:00,16,',
-      '2026-01-07 20:00,2026-01-08 12:00,200,9',
+      'startedAt,endedAt,targetHours',
+      '2026-01-05 20:00,2026-01-06 12:00,16',
+      '2026-01-06 20:00,2026-01-06 10:00,16',
+      '2026-01-07 20:00,2026-01-08 12:00,200',
     ].join('\n')
     const { rows, errors } = parseFastsCsv(csv, now)
     expect(rows).toHaveLength(1)
     expect(errors).toEqual([
       { code: 'endBeforeStart', line: 3 },
       { code: 'invalidTarget', line: 4, value: '200' },
-      { code: 'invalidRating', line: 4, value: '9' },
     ])
   })
 
@@ -57,12 +56,29 @@ describe('parseFastsCsv', () => {
     ])
   })
 
+  it('imports legacy exports while ignoring the removed rating column', () => {
+    const csv = [
+      'startedAt,endedAt,targetHours,rating,note',
+      '2026-01-05T20:00:00Z,2026-01-06T12:00:00Z,16,4,Keep this note',
+    ].join('\n')
+    expect(parseFastsCsv(csv, now)).toEqual({
+      rows: [
+        {
+          startedAt: '2026-01-05T20:00:00.000Z',
+          endedAt: '2026-01-06T12:00:00.000Z',
+          targetHours: 16,
+          note: 'Keep this note',
+        },
+      ],
+      errors: [],
+    })
+  })
+
   it('round-trips an export', () => {
     const fast = {
       startedAt: new Date(2026, 0, 5, 20, 30).toISOString(),
       endedAt: new Date(2026, 0, 6, 12, 45).toISOString(),
       targetHours: 16,
-      rating: 4,
       note: 'Hola, "mundo"',
     } as Fast
     expect(parseFastsCsv(fastsToCsv([fast]), now).rows).toEqual([fast])
@@ -74,7 +90,6 @@ describe('classifyImport', () => {
     startedAt,
     endedAt,
     targetHours: 16,
-    rating: 0,
     note: '',
   })
 

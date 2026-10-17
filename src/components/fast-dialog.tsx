@@ -1,22 +1,19 @@
 import { useState } from 'react'
 import { ConfirmDialog } from '#/components/confirm-dialog'
 import { Dialog } from '#/components/dialog'
-import type { MessageKey } from '#/lib/messages'
 import { type Fast, findOverlap } from '#/lib/pb'
-import { type Translate, useI18n } from '#/lib/preferences'
+import { useI18n } from '#/lib/preferences'
 import { formatDate, fromLocalInput, toLocalInput } from '#/lib/time'
 
-export type FastPatch = Partial<Pick<Fast, 'startedAt' | 'endedAt' | 'note' | 'rating'>>
+export type FastPatch = Partial<Pick<Fast, 'startedAt' | 'endedAt' | 'note'>>
 
 type Mode = 'edit-active' | 'finish' | 'edit-past'
 
-export const RATINGS = ['😫', '😕', '😐', '🙂', '😄']
-
 /**
- * Bottom-sheet style dialog to edit a fast's times, rating and note.
+ * Bottom-sheet style dialog to edit a fast's times and note.
  * The goal comes from settings, so it is not editable here.
  * - edit-active: start time
- * - finish: end time + rating + note
+ * - finish: end time + note
  * - edit-past: everything, plus delete
  */
 export function FastDialog({
@@ -36,7 +33,6 @@ export function FastDialog({
   const [startedAt, setStartedAt] = useState(() => toLocalInput(fast.startedAt))
   const [endedAt, setEndedAt] = useState(() => toLocalInput(fast.endedAt || Date.now()))
   const [note, setNote] = useState(fast.note ?? '')
-  const [rating, setRating] = useState(fast.rating ?? 0)
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   const [confirmingDelete, setConfirmingDelete] = useState(false)
@@ -61,7 +57,6 @@ export function FastDialog({
     if (showEnd) patch.endedAt = fromLocalInput(endedAt)
     if (showNote) {
       patch.note = note.trim()
-      patch.rating = rating
     }
 
     setBusy(true)
@@ -135,8 +130,6 @@ export function FastDialog({
           </label>
         )}
 
-        {showNote && <RatingPicker t={t} value={rating} onChange={setRating} />}
-
         {showNote && (
           <label className="flex flex-col gap-1.5 text-sm font-semibold">
             {t('dialog.note')}
@@ -204,43 +197,5 @@ export function FastDialog({
         />
       )}
     </Dialog>
-  )
-}
-
-function RatingPicker({
-  t,
-  value,
-  onChange,
-}: {
-  t: Translate
-  value: number
-  onChange: (v: number) => void
-}) {
-  return (
-    <fieldset className="flex flex-col gap-1.5">
-      <legend className="mb-1.5 text-sm font-semibold">{t('dialog.howDidYouFeel')}</legend>
-      <div className="flex justify-between gap-2">
-        {RATINGS.map((emoji, i) => {
-          const v = i + 1
-          const selected = v === value
-          return (
-            <button
-              key={emoji}
-              type="button"
-              aria-pressed={selected}
-              aria-label={t(`rating.${v}` as MessageKey)}
-              onClick={() => onChange(selected ? 0 : v)}
-              className={`grid size-12 place-items-center rounded-full border text-2xl transition-transform ${
-                selected
-                  ? 'scale-110 border-[var(--lagoon)] bg-[var(--lagoon)]/15'
-                  : 'border-input opacity-60'
-              }`}
-            >
-              {emoji}
-            </button>
-          )
-        })}
-      </div>
-    </fieldset>
   )
 }
