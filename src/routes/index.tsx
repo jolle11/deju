@@ -15,7 +15,7 @@ import {
 } from '#/lib/pb'
 import { type Translate, useI18n, usePrefs } from '#/lib/preferences'
 import { durationMs, fastLevel } from '#/lib/stats'
-import { capitalize, formatDate, formatDuration } from '#/lib/time'
+import { capitalize, dateFormat, formatDate, formatDuration } from '#/lib/time'
 import { cn } from '#/lib/utils'
 import { type Zone, zoneAt } from '#/lib/zones'
 
@@ -237,7 +237,13 @@ function Home() {
                   +{formatDuration(elapsed - goalMs)}
                 </span>
               ) : (
-                <HourMilestones t={t} elapsed={elapsed} targetHours={fast.targetHours} />
+                <NextMilestone
+                  t={t}
+                  locale={locale}
+                  startedAt={fast.startedAt}
+                  elapsed={elapsed}
+                  targetHours={fast.targetHours}
+                />
               )}
             </>
           ) : (
@@ -456,25 +462,37 @@ function ZoneCard({
   )
 }
 
-/** Time left to the next whole hour and to the goal, e.g. "25:10 to 12h · 1:25:10 to 13h". */
-function HourMilestones({
+/** Hours where a fast already counts (12h minimum, then 13h), before the user's goal. */
+const MILESTONE_HOURS = [12, 13]
+
+/**
+ * Next milestone: 12h, then 13h, then the goal. Counts down to the first one;
+ * past it, says at what time of day the next one is reached.
+ */
+function NextMilestone({
   t,
+  locale,
+  startedAt,
   elapsed,
   targetHours,
 }: {
   t: Translate
+  locale: string
+  startedAt: string
   elapsed: number
   targetHours: number
 }) {
-  const nextHour = Math.floor(elapsed / 3_600_000) + 1
-  const hours = nextHour < targetHours ? [nextHour, targetHours] : [targetHours]
+  const h = MILESTONE_HOURS.find((m) => m < targetHours && m * 3_600_000 > elapsed) ?? targetHours
+  const firstReached = elapsed >= Math.min(MILESTONE_HOURS[0], targetHours) * 3_600_000
+  const at = new Date(new Date(startedAt).getTime() + h * 3_600_000)
   return (
-    <span className="flex flex-col items-center text-sm font-semibold text-muted-foreground tabular-nums">
-      {hours.map((h) => (
-        <span key={h}>
-          {t('home.untilHour', { h, t: formatDuration(h * 3_600_000 - elapsed) })}
-        </span>
-      ))}
+    <span className="text-sm font-semibold text-muted-foreground tabular-nums">
+      {firstReached
+        ? t('home.hourAt', {
+            h,
+            time: dateFormat(locale, { hour: '2-digit', minute: '2-digit' }).format(at),
+          })
+        : t('home.untilHour', { h, t: formatDuration(h * 3_600_000 - elapsed) })}
     </span>
   )
 }
