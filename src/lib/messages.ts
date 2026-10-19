@@ -43,7 +43,7 @@ const es = {
 
   'home.fastOf': 'Ayuno de {h}h',
   'home.goalReached': '¡Objetivo cumplido!',
-  'home.remaining': 'Quedan {t}',
+  'home.untilHour': '{t} para las {h}h',
   'home.ready': 'Listo para empezar',
   'home.sinceLast': 'Desde el último ayuno',
   'home.nextFastIn': 'Siguiente ayuno en {t}',
@@ -256,7 +256,7 @@ const ca: Messages = {
 
   'home.fastOf': 'Dejuni de {h}h',
   'home.goalReached': 'Objectiu assolit!',
-  'home.remaining': 'Queden {t}',
+  'home.untilHour': '{t} per a les {h}h',
   'home.ready': 'A punt per començar',
   'home.sinceLast': 'Des de l’últim dejuni',
   'home.nextFastIn': 'Proper dejuni en {t}',
@@ -466,7 +466,7 @@ const en: Messages = {
 
   'home.fastOf': '{h}h fast',
   'home.goalReached': 'Goal reached!',
-  'home.remaining': '{t} left',
+  'home.untilHour': '{t} to {h}h',
   'home.ready': 'Ready to start',
   'home.sinceLast': 'Since last fast',
   'home.nextFastIn': 'Next fast in {t}',

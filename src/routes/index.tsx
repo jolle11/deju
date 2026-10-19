@@ -232,11 +232,13 @@ function Home() {
               <span className="font-display text-5xl font-extrabold tracking-tight tabular-nums lg:text-6xl">
                 {formatDuration(elapsed)}
               </span>
-              <span className="text-sm font-semibold text-muted-foreground tabular-nums">
-                {progress >= 1
-                  ? `+${formatDuration(elapsed - goalMs)}`
-                  : t('home.remaining', { t: formatDuration(goalMs - elapsed) })}
-              </span>
+              {progress >= 1 ? (
+                <span className="text-sm font-semibold text-muted-foreground tabular-nums">
+                  +{formatDuration(elapsed - goalMs)}
+                </span>
+              ) : (
+                <HourMilestones t={t} elapsed={elapsed} targetHours={fast.targetHours} />
+              )}
             </>
           ) : (
             <IdleStatus
@@ -451,6 +453,29 @@ function ZoneCard({
         </p>
       )}
     </div>
+  )
+}
+
+/** Time left to the next whole hour and to the goal, e.g. "25:10 to 12h · 1:25:10 to 13h". */
+function HourMilestones({
+  t,
+  elapsed,
+  targetHours,
+}: {
+  t: Translate
+  elapsed: number
+  targetHours: number
+}) {
+  const nextHour = Math.floor(elapsed / 3_600_000) + 1
+  const hours = nextHour < targetHours ? [nextHour, targetHours] : [targetHours]
+  return (
+    <span className="flex flex-col items-center text-sm font-semibold text-muted-foreground tabular-nums">
+      {hours.map((h) => (
+        <span key={h}>
+          {t('home.untilHour', { h, t: formatDuration(h * 3_600_000 - elapsed) })}
+        </span>
+      ))}
+    </span>
   )
 }
 
