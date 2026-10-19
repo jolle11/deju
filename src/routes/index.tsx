@@ -1,7 +1,8 @@
 import { createFileRoute, Link, redirect } from '@tanstack/react-router'
-import { ChevronDown } from 'lucide-react'
+import { Info } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { AppShell } from '#/components/app-shell'
+import { Dialog } from '#/components/dialog'
 import { FastDialog } from '#/components/fast-dialog'
 import { Delayed, Skeleton } from '#/components/skeleton'
 import { onCollectionChange } from '#/lib/live'
@@ -17,7 +18,7 @@ import { type Translate, useI18n, usePrefs } from '#/lib/preferences'
 import { durationMs, fastLevel } from '#/lib/stats'
 import { capitalize, dateFormat, formatDate, formatDuration } from '#/lib/time'
 import { cn } from '#/lib/utils'
-import { type Zone, zoneAt } from '#/lib/zones'
+import { ZONES, type Zone, zoneAt } from '#/lib/zones'
 
 export const Route = createFileRoute('/')({
   beforeLoad: () => {
@@ -434,31 +435,80 @@ function ZoneCard({
   elapsed: number
 }) {
   const [open, setOpen] = useState(false)
+  const name = t(`zone.${zone.id}`)
   return (
-    <div className="w-full rounded-2xl border border-input px-4 py-3">
+    <div className="flex w-full items-center gap-3 rounded-2xl border border-input px-4 py-3">
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center gap-2">
+          <span className="size-3 shrink-0 rounded-full" style={{ backgroundColor: zone.color }} />
+          <span className="font-display text-lg font-extrabold">{name}</span>
+        </div>
+        {next && (
+          <p className="mt-1 text-xs font-bold uppercase tracking-wider text-muted-foreground tabular-nums">
+            {t('home.nextZoneIn', {
+              zone: t(`zone.${next.id}`),
+              t: formatDuration(next.fromHours * 3_600_000 - elapsed),
+            })}
+          </p>
+        )}
+      </div>
       <button
         type="button"
-        aria-expanded={open}
-        onClick={() => setOpen((o) => !o)}
-        className="flex w-full items-center gap-2 text-left"
+        onClick={() => setOpen(true)}
+        aria-label={t('zone.infoFor', { zone: name })}
+        className="grid size-12 shrink-0 place-items-center rounded-full border border-input bg-foreground/5 text-foreground transition-colors hover:bg-foreground/10 active:scale-95"
       >
-        <span className="size-3 rounded-full" style={{ backgroundColor: zone.color }} />
-        <span className="flex-1 font-display text-lg font-extrabold">{t(`zone.${zone.id}`)}</span>
-        <ChevronDown
-          className={`size-4 text-muted-foreground transition-transform ${open ? 'rotate-180' : ''}`}
-          aria-hidden="true"
-        />
+        <Info className="size-6" aria-hidden="true" />
       </button>
-      {open && <p className="mt-1 text-sm text-muted-foreground">{t(`zone.${zone.id}.desc`)}</p>}
-      {next && (
-        <p className="mt-2 text-xs font-bold uppercase tracking-wider text-muted-foreground tabular-nums">
-          {t('home.nextZoneIn', {
-            zone: t(`zone.${next.id}`),
-            t: formatDuration(next.fromHours * 3_600_000 - elapsed),
-          })}
-        </p>
-      )}
+      {open && <ZoneInfoDialog t={t} zone={zone} onClose={() => setOpen(false)} />}
     </div>
+  )
+}
+
+function ZoneInfoDialog({ t, zone, onClose }: { t: Translate; zone: Zone; onClose: () => void }) {
+  const i = ZONES.indexOf(zone)
+  const steps = [
+    { label: t('zone.previous'), z: ZONES[i - 1] },
+    { label: t('zone.current'), z: zone, current: true },
+    { label: t('zone.next'), z: ZONES[i + 1] },
+  ].filter((s): s is { label: string; z: Zone; current?: boolean } => !!s.z)
+  return (
+    <Dialog title={t('zone.info')} onClose={onClose}>
+      <ol className="flex flex-col gap-2">
+        {steps.map(({ label, z, current }) => (
+          <li
+            key={z.id}
+            className={cn(
+              'rounded-2xl border px-4 py-3',
+              current ? 'border-2' : 'border-input opacity-70',
+            )}
+            style={current ? { borderColor: z.color } : undefined}
+          >
+            <div className="flex items-center gap-2">
+              <span className="size-3 shrink-0 rounded-full" style={{ backgroundColor: z.color }} />
+              <span className="flex-1 font-display text-lg font-extrabold">
+                {t(`zone.${z.id}`)}
+              </span>
+              <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                {label}
+              </span>
+            </div>
+            <p className="mt-1 text-xs font-bold text-muted-foreground tabular-nums">
+              {t('zone.from', { h: z.fromHours })}
+            </p>
+            <p className="mt-1 text-sm text-muted-foreground">{t(`zone.${z.id}.desc`)}</p>
+          </li>
+        ))}
+      </ol>
+      <button
+        type="button"
+        data-dialog-initial-focus
+        onClick={onClose}
+        className="rounded-full bg-primary px-4 py-3 font-bold text-primary-foreground"
+      >
+        {t('common.close')}
+      </button>
+    </Dialog>
   )
 }
 
