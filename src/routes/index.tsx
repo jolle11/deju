@@ -15,7 +15,7 @@ import {
   USER_CACHE_PREFIX,
 } from '#/lib/pb'
 import { type Translate, useI18n, usePrefs } from '#/lib/preferences'
-import { durationMs, fastLevel } from '#/lib/stats'
+import { fastLevel } from '#/lib/stats'
 import { capitalize, dateFormat, formatDate, formatDuration } from '#/lib/time'
 import { cn } from '#/lib/utils'
 import { ZONES, type Zone, zoneAt } from '#/lib/zones'
@@ -367,7 +367,7 @@ function StreakStrip({ t, locale, items }: { t: Translate; locale: string; items
               STRIP_CLASS[fastLevel(f) ?? 'none']
             }`}
           >
-            {Math.round(durationMs(f) / 3_600_000)}
+            {new Date(f.startedAt).getDate()}
           </span>
           <span className="text-[0.65rem] font-semibold uppercase text-muted-foreground">
             {new Date(f.startedAt).toLocaleDateString(locale, { weekday: 'narrow' })}
