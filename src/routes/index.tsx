@@ -360,17 +360,17 @@ function StreakStrip({ t, locale, items }: { t: Translate; locale: string; items
         <span
           key={f.id}
           className="flex flex-col items-center gap-1"
-          title={capitalize(formatDate(f.startedAt, locale))}
+          title={capitalize(formatDate(f.endedAt ?? f.startedAt, locale))}
         >
           <span
             className={`grid size-9 place-items-center rounded-full text-[0.65rem] font-extrabold tabular-nums ${
               STRIP_CLASS[fastLevel(f) ?? 'none']
             }`}
           >
-            {new Date(f.startedAt).getDate()}
+            {new Date(f.endedAt ?? f.startedAt).getDate()}
           </span>
           <span className="text-[0.65rem] font-semibold uppercase text-muted-foreground">
-            {new Date(f.startedAt).toLocaleDateString(locale, { weekday: 'narrow' })}
+            {new Date(f.endedAt ?? f.startedAt).toLocaleDateString(locale, { weekday: 'narrow' })}
           </span>
         </span>
       ))}
