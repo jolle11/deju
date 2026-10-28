@@ -22,10 +22,22 @@ export type User = RecordModel & {
   /** Base color for the custom accent, "#rrggbb". */
   customColor: string
   targetHours: number
+  /** Body measurements: "" = not asked yet. */
+  bodyTracking: '' | 'on' | 'off'
+}
+
+export type Measurement = RecordModel & {
+  user: string
+  date: string
+  /** 0 = not recorded */
+  weightKg: number
+  /** 0 = not recorded */
+  waistCm: number
 }
 
 export const fasts = () => pb.collection<Fast>('fasts')
 export const users = () => pb.collection<User>('users')
+export const measurements = () => pb.collection<Measurement>('measurements')
 
 /**
  * First other fast whose time range intersects [start, end). A running fast

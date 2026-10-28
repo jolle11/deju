@@ -35,7 +35,6 @@ function addDays(date: Date, n: number) {
 }
 
 export function computeStats(items: Fast[], now = new Date()) {
-  const completedDays = new Set(items.filter(isCompleted).map((f) => dayKey(f.endedAt)))
   const dayLevels = new Map<string, DayLevel>()
   for (const f of items) {
     const key = dayKey(f.endedAt)
@@ -43,6 +42,8 @@ export function computeStats(items: Fast[], now = new Date()) {
     else if (durationMs(f) >= MIN_FAST_HOURS * 3_600_000 && !dayLevels.has(key))
       dayLevels.set(key, 'min')
   }
+  // Any day with a fast that counts (goal or MIN_FAST_HOURS) keeps the streak alive.
+  const doneDays = new Set(dayLevels.keys())
   const hoursByDay = new Map<string, number>()
   for (const f of items) {
     const key = dayKey(f.endedAt)
@@ -51,9 +52,9 @@ export function computeStats(items: Fast[], now = new Date()) {
 
   // Current streak: today counts if done, otherwise start from yesterday.
   let cursor = startOfDay(now)
-  if (!completedDays.has(dayKey(cursor))) cursor = addDays(cursor, -1)
+  if (!doneDays.has(dayKey(cursor))) cursor = addDays(cursor, -1)
   let streak = 0
-  while (completedDays.has(dayKey(cursor))) {
+  while (doneDays.has(dayKey(cursor))) {
     streak++
     cursor = addDays(cursor, -1)
   }
@@ -61,7 +62,7 @@ export function computeStats(items: Fast[], now = new Date()) {
   let bestStreak = 0
   let run = 0
   let prev: number | null = null
-  for (const key of [...completedDays].sort()) {
+  for (const key of [...doneDays].sort()) {
     const t = new Date(`${key}T00:00:00`).getTime()
     run = prev !== null && Math.round((t - prev) / DAY) === 1 ? run + 1 : 1
     bestStreak = Math.max(bestStreak, run)
@@ -78,7 +79,7 @@ export function computeStats(items: Fast[], now = new Date()) {
     averageMs: items.length ? totalMs / items.length : 0,
     streak,
     bestStreak,
-    completedDays,
+    doneDays,
     dayLevels,
     hoursByDay,
   }
@@ -87,6 +88,12 @@ export function computeStats(items: Fast[], now = new Date()) {
 export function lastDays(n: number, now = new Date()) {
   const today = startOfDay(now)
   return Array.from({ length: n }, (_, i) => addDays(today, i - n + 1))
+}
+
+/** The last `n` calendar days, oldest first, with how each went (by end day). */
+export function recentDays(items: Fast[], n: number, now = new Date()) {
+  const { dayLevels } = computeStats(items, now)
+  return lastDays(n, now).map((date) => ({ date, level: dayLevels.get(dayKey(date)) ?? null }))
 }
 
 export type PeriodSummary = {

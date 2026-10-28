@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vitest'
 import type { Fast } from './pb'
-import { computeStats, dayKey, isCompleted, monthComparison, weeklyCompletion } from './stats'
+import {
+  computeStats,
+  dayKey,
+  isCompleted,
+  monthComparison,
+  recentDays,
+  weeklyCompletion,
+} from './stats'
 
 let seq = 0
 function fast(startedAt: string, endedAt: string, targetHours = 16): Fast {
@@ -59,11 +66,16 @@ describe('computeStats', () => {
     expect(stats.bestStreak).toBe(2)
   })
 
-  it('marks days that only reached the minimum', () => {
+  it('marks days that only reached the minimum and keeps the streak', () => {
     const short = fast('2026-01-03T22:00', '2026-01-04T11:00')
     const stats = computeStats([short], now)
     expect(stats.dayLevels.get('2026-01-04')).toBe('min')
-    expect(stats.streak).toBe(0)
+    expect(stats.streak).toBe(1)
+  })
+
+  it('does not count fasts below the minimum', () => {
+    const tooShort = fast('2026-01-04T00:00', '2026-01-04T11:00')
+    expect(computeStats([tooShort], now).streak).toBe(0)
   })
 
   it('totals and averages durations', () => {
@@ -118,6 +130,21 @@ describe('period stats', () => {
       [0, 0],
       [1, 0],
       [1, 1],
+    ])
+  })
+})
+
+describe('recentDays', () => {
+  it('lists every calendar day once, even with two fasts on the same day', () => {
+    const items = [
+      fast('2026-01-03T20:00', '2026-01-04T12:00'),
+      fast('2026-01-04T13:00', '2026-01-04T23:00', 8),
+    ]
+    const days = recentDays(items, 3, new Date('2026-01-05T09:00'))
+    expect(days.map((d) => [dayKey(d.date), d.level])).toEqual([
+      ['2026-01-03', null],
+      ['2026-01-04', 'goal'],
+      ['2026-01-05', null],
     ])
   })
 })

@@ -1,12 +1,14 @@
 import { createFileRoute, redirect } from '@tanstack/react-router'
+import type { RecordSubscription } from 'pocketbase'
 import { useEffect, useMemo, useState } from 'react'
 import { AppShell } from '#/components/app-shell'
 import { Badges } from '#/components/badges'
+import { BodySection } from '#/components/body-section'
 import { FastDialog } from '#/components/fast-dialog'
 import { MonthComparison, WeeklyCompletionChart } from '#/components/period-stats'
 import { Delayed, Skeleton } from '#/components/skeleton'
-import { MonthCalendar, WeeklyChart } from '#/components/stats'
-import { onCollectionChange } from '#/lib/live'
+import { FastingHeatmap, MonthCalendar, WeeklyChart } from '#/components/stats'
+import { applyEvent, onCollectionChange } from '#/lib/live'
 import { type Fast, fasts, isLoggedIn } from '#/lib/pb'
 import { useI18n, usePrefs } from '#/lib/preferences'
 import { renderMonthCard, shareImage } from '#/lib/share-card'
@@ -37,18 +39,30 @@ const DOT_CLASS = {
 /** Fasts listed at a time; stats always use the full history. */
 const PAGE_SIZE = 20
 
+const isPast = (f: Fast) => Boolean(f.endedAt)
+const newestFirst = (a: Fast, b: Fast) => b.startedAt.localeCompare(a.startedAt)
+
+/** Every finished fast, loaded once and then kept in sync from realtime events. */
 function usePastFasts() {
   const [items, setItems] = useState<Fast[] | null>(null)
 
   useEffect(() => {
-    const load = () =>
-      fasts()
-        .getFullList({ filter: 'endedAt != ""', sort: '-startedAt', requestKey: null })
-        .then(setItems)
-        .catch(() => setItems([]))
+    fasts()
+      .getFullList({
+        filter: 'endedAt != ""',
+        sort: '-startedAt',
+        // Only what the stats and list need: keeps long histories light.
+        fields: 'id,collectionId,collectionName,user,startedAt,endedAt,targetHours,note',
+        requestKey: null,
+      })
+      .then(setItems)
+      .catch(() => setItems([]))
 
-    load()
-    return onCollectionChange('fasts', load)
+    return onCollectionChange('fasts', (event) =>
+      setItems((list) =>
+        list ? applyEvent(list, event as RecordSubscription<Fast>, isPast, newestFirst) : list,
+      ),
+    )
   }, [])
 
   return items
@@ -56,7 +70,7 @@ function usePastFasts() {
 
 function History() {
   const { t, locale } = useI18n()
-  const { targetHours } = usePrefs()
+  const { targetHours, bodyTracking } = usePrefs()
   const items = usePastFasts()
   const [editing, setEditing] = useState<Fast | null>(null)
   const [visible, setVisible] = useState(PAGE_SIZE)
@@ -100,7 +114,10 @@ function History() {
   return (
     <AppShell title={t('history.title')}>
       {items.length === 0 ? (
-        <p className="py-16 text-center text-muted-foreground">{t('history.empty')}</p>
+        <div className="flex flex-col gap-6">
+          <p className="py-16 text-center text-muted-foreground">{t('history.empty')}</p>
+          {bodyTracking === 'on' && <BodySection />}
+        </div>
       ) : (
         <div className="grid gap-6 lg:grid-cols-2 lg:items-start">
           <div className="flex flex-col gap-6">
@@ -125,9 +142,11 @@ function History() {
               goalHours={targetHours}
             />
             <MonthCalendar dayLevels={stats.dayLevels} onShare={shareMonth} />
+            <FastingHeatmap hoursByDay={stats.hoursByDay} dayLevels={stats.dayLevels} />
             <MonthComparison items={items} />
             <WeeklyCompletionChart items={items} />
             <Badges stats={stats} />
+            {bodyTracking === 'on' && <BodySection />}
           </div>
 
           <section className="flex flex-col gap-3">

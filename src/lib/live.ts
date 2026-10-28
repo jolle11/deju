@@ -1,3 +1,4 @@
+import type { RecordModel, RecordSubscription } from 'pocketbase'
 import { pb } from './pb'
 
 /**
@@ -5,15 +6,17 @@ import { pb } from './pb'
  * Screens only add/remove local listeners, so navigating never tears down the
  * SSE connection mid-handshake (which yields "400 Invalid realtime client").
  */
-const listeners = new Map<string, Set<() => void>>()
+type Listener = (event: RecordSubscription<RecordModel>) => void
+
+const listeners = new Map<string, Set<Listener>>()
 const subscribed = new Set<string>()
 
 function ensureSubscribed(collection: string, attempt = 0) {
   if (subscribed.has(collection) || !pb.authStore.isValid) return
   subscribed.add(collection)
   pb.collection(collection)
-    .subscribe('*', () => {
-      for (const fn of listeners.get(collection) ?? []) fn()
+    .subscribe('*', (event) => {
+      for (const fn of listeners.get(collection) ?? []) fn(event)
     })
     .catch((err) => {
       subscribed.delete(collection)
@@ -28,8 +31,11 @@ function ensureSubscribed(collection: string, attempt = 0) {
     })
 }
 
-/** Calls `onChange` whenever any record in `collection` changes. Returns a cleanup fn. */
-export function onCollectionChange(collection: string, onChange: () => void) {
+/**
+ * Calls `onChange` with the event whenever any record in `collection` changes.
+ * Returns a cleanup fn.
+ */
+export function onCollectionChange(collection: string, onChange: Listener) {
   let set = listeners.get(collection)
   if (!set) {
     set = new Set()
@@ -48,3 +54,18 @@ pb.authStore.onChange(() => {
   subscribed.clear()
   pb.realtime.unsubscribe().catch(() => {})
 })
+
+/**
+ * Applies a realtime event to a local list instead of refetching it. Records
+ * that no longer pass `keep` are dropped; the result is sorted with `compare`.
+ */
+export function applyEvent<T extends RecordModel>(
+  items: T[],
+  event: RecordSubscription<T>,
+  keep: (record: T) => boolean,
+  compare: (a: T, b: T) => number,
+) {
+  const rest = items.filter((item) => item.id !== event.record.id)
+  if (event.action !== 'delete' && keep(event.record)) rest.push(event.record)
+  return rest.sort(compare)
+}

@@ -35,7 +35,7 @@ Genera las claves VAPID una vez: `npx web-push generate-vapid-keys`.
 ## Desarrollo local
 ```sh
 # PocketBase (binario descargado de github.com/pocketbase/pocketbase/releases)
-./pocketbase serve --dir=./pocketbase/pb_data --migrationsDir=./pocketbase/pb_migrations
+./pocketbase serve --dir=./pocketbase/pb_data --migrationsDir=./pocketbase/pb_migrations --hooksDir=./pocketbase/pb_hooks
 # Frontend: copia .env.example a .env.local
 npm run dev
 # Worker: copia worker/.env.example a worker/.env

@@ -18,6 +18,8 @@ export type Prefs = {
   targetHours: number
   /** 0 = no next-fast reminder */
   eatingWindowHours: number
+  /** Weight/waist log: "" = not asked yet (asked during onboarding). */
+  bodyTracking: '' | 'on' | 'off'
 }
 
 export const DEFAULT_TARGET_HOURS = 16
@@ -33,6 +35,7 @@ export const DEFAULT_PREFS: Prefs = {
   customColor: DEFAULT_CUSTOM_COLOR,
   targetHours: DEFAULT_TARGET_HOURS,
   eatingWindowHours: 0,
+  bodyTracking: '',
 }
 
 /** Mirrors the prefs locally so the theme applies before React boots (see __root.tsx). */
@@ -53,6 +56,7 @@ function sanitize(raw: Partial<Record<keyof Prefs, unknown>> | null | undefined)
     customColor: isHexColor(r.customColor) ? r.customColor.toLowerCase() : DEFAULT_CUSTOM_COLOR,
     targetHours: Number(r.targetHours) > 0 ? Number(r.targetHours) : DEFAULT_TARGET_HOURS,
     eatingWindowHours: Number(r.eatingWindowHours) > 0 ? Number(r.eatingWindowHours) : 0,
+    bodyTracking: r.bodyTracking === 'on' || r.bodyTracking === 'off' ? r.bodyTracking : '',
   }
 }
 

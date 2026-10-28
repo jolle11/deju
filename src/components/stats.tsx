@@ -233,3 +233,95 @@ export function MonthCalendar({
     </section>
   )
 }
+
+/** Weeks shown in the heatmap: about six months. */
+const HEATMAP_WEEKS = 26
+
+const HEAT_CLASS = {
+  none: 'bg-foreground/[0.07]',
+  short: 'bg-[var(--lagoon)]/20',
+  min: 'bg-[var(--lagoon)]/55',
+  goal: 'bg-[var(--lagoon)]',
+}
+
+/**
+ * GitHub-style grid of the last HEATMAP_WEEKS weeks, Monday-first columns.
+ * Shade grows from a short fast to MIN_FAST_HOURS to the goal; by end day.
+ */
+export function FastingHeatmap({
+  hoursByDay,
+  dayLevels,
+}: {
+  hoursByDay: Map<string, number>
+  dayLevels: Map<string, DayLevel>
+}) {
+  const { t, locale } = useI18n()
+  const dayFmt = dateFormat(locale, LONG_DAY)
+  const monthFmt = dateFormat(locale, { month: 'short' })
+  const today = startOfDay(new Date())
+  const firstMonday = new Date(today)
+  firstMonday.setDate(today.getDate() - ((today.getDay() + 6) % 7) - (HEATMAP_WEEKS - 1) * 7)
+  const weeks = Array.from({ length: HEATMAP_WEEKS }, (_, w) =>
+    Array.from({ length: 7 }, (_, d) => {
+      const date = new Date(firstMonday)
+      date.setDate(firstMonday.getDate() + w * 7 + d)
+      return date
+    }),
+  )
+
+  const shade = (date: Date) => {
+    const key = dayKey(date)
+    const level = dayLevels.get(key)
+    if (level) return level
+    return (hoursByDay.get(key) ?? 0) > 0 ? 'short' : 'none'
+  }
+
+  const legend = [
+    ['none', t('heatmap.none')],
+    ['short', t('heatmap.short', { h: MIN_FAST_HOURS })],
+    ['min', t('calendar.legendMin', { h: MIN_FAST_HOURS })],
+    ['goal', t('calendar.legendGoal')],
+  ] as const
+
+  return (
+    <section className="rounded-2xl border border-input p-4">
+      <h2 className="font-display text-lg font-extrabold">{t('heatmap.title')}</h2>
+      <p className="text-xs text-muted-foreground">{t('heatmap.desc')}</p>
+      <div className="mt-3 flex gap-[3px]">
+        {weeks.map((days) => {
+          // Label a column when a month starts in it.
+          const monthStart = days.find((d) => d.getDate() === 1)
+          return (
+            <div key={dayKey(days[0])} className="flex flex-1 flex-col gap-[3px]">
+              <span className="h-3 overflow-visible text-[9px] font-bold whitespace-nowrap text-muted-foreground">
+                {monthStart ? capitalize(monthFmt.format(monthStart)) : ''}
+              </span>
+              {days.map((date) => {
+                const future = date > today
+                const level = shade(date)
+                const hours = hoursByDay.get(dayKey(date)) ?? 0
+                return (
+                  <span
+                    key={dayKey(date)}
+                    title={
+                      future ? undefined : `${capitalize(dayFmt.format(date))} · ${formatH(hours)}`
+                    }
+                    className={`aspect-square rounded-[3px] ${future ? '' : HEAT_CLASS[level]}`}
+                  />
+                )
+              })}
+            </div>
+          )
+        })}
+      </div>
+      <ul className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs font-semibold text-muted-foreground">
+        {legend.map(([level, label]) => (
+          <li key={level} className="flex items-center gap-1.5">
+            <span className={`size-3 rounded-[3px] ${HEAT_CLASS[level]}`} />
+            {label}
+          </li>
+        ))}
+      </ul>
+    </section>
+  )
+}

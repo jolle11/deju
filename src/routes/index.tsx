@@ -12,10 +12,17 @@ import {
   type Fast,
   fasts,
   isLoggedIn,
+  pb,
   USER_CACHE_PREFIX,
 } from '#/lib/pb'
+import {
+  flushPendingStop,
+  isNetworkError,
+  readPendingStop,
+  writePendingStop,
+} from '#/lib/pending-stop'
 import { type Translate, useI18n, usePrefs } from '#/lib/preferences'
-import { fastLevel } from '#/lib/stats'
+import { dayKey, lastDays, recentDays } from '#/lib/stats'
 import { capitalize, dateFormat, formatDate, formatDuration } from '#/lib/time'
 import { cn } from '#/lib/utils'
 import { ZONES, type Zone, zoneAt } from '#/lib/zones'
@@ -23,59 +30,33 @@ import { ZONES, type Zone, zoneAt } from '#/lib/zones'
 export const Route = createFileRoute('/')({
   beforeLoad: () => {
     if (!isLoggedIn()) throw redirect({ to: '/welcome' })
-    // First visit: ask for the fasting goal (0 = never chosen).
-    if (!currentUser()?.targetHours) throw redirect({ to: '/onboarding' })
+    // First visit: ask for the fasting goal (0 = never chosen) and body tracking.
+    const user = currentUser()
+    if (!user?.targetHours || !user.bodyTracking) throw redirect({ to: '/onboarding' })
   },
   component: Home,
 })
 
-type RecentFasts = { active: Fast | null; past: Fast[] }
+/** The running fast, the last finished one and every fast that ended this week. */
+type RecentFasts = { active: Fast | null; lastEnded: Fast | null; week: Fast[] }
+
+/** Days shown in the strip under the timer. */
+const STRIP_DAYS = 7
 
 const recentCacheKey = () => `${USER_CACHE_PREFIX}recent-fasts:${currentUserId()}`
 
 function readRecentCache(): RecentFasts | null {
   try {
-    return JSON.parse(localStorage.getItem(recentCacheKey()) ?? 'null')
+    const cached = JSON.parse(localStorage.getItem(recentCacheKey()) ?? 'null')
+    // Ignore copies saved by older versions with a different shape.
+    return cached && Array.isArray(cached.week) ? cached : null
   } catch {
     return null
-  }
-}
-
-/** An end time that could not reach the server yet (offline). */
-type PendingStop = { id: string; endedAt: string }
-
-const pendingStopKey = () => `${USER_CACHE_PREFIX}pending-stop:${currentUserId()}`
-
-function readPendingStop(): PendingStop | null {
-  try {
-    return JSON.parse(localStorage.getItem(pendingStopKey()) ?? 'null')
-  } catch {
-    return null
-  }
-}
-
-function writePendingStop(pending: PendingStop | null) {
-  if (pending) localStorage.setItem(pendingStopKey(), JSON.stringify(pending))
-  else localStorage.removeItem(pendingStopKey())
-}
-
-/** PocketBase reports network failures (offline, aborted) as status 0. */
-const isNetworkError = (err: unknown) => (err as { status?: number }).status === 0
-
-/** Sends a queued end time. Only network failures keep it queued. */
-async function flushPendingStop() {
-  const pending = readPendingStop()
-  if (!pending) return
-  try {
-    await fasts().update(pending.id, { endedAt: pending.endedAt }, { requestKey: null })
-    writePendingStop(null)
-  } catch (err) {
-    if (!isNetworkError(err)) writePendingStop(null)
   }
 }
 
 /**
- * The running fast (if any) plus the last few finished ones. Starts from the
+ * The running fast (if any) plus the recent finished ones. Starts from the
  * copy saved on the last visit so the screen paints instantly, then refreshes.
  */
 function useRecentFasts() {
@@ -90,26 +71,41 @@ function useRecentFasts() {
               .getList(1, 1, { filter: 'endedAt = ""', sort: '-startedAt', requestKey: null })
               .then((r) => r.items[0] ?? null),
             fasts()
-              .getList(1, 7, { filter: 'endedAt != ""', sort: '-endedAt', requestKey: null })
-              .then((r) => r.items),
+              .getList(1, 1, { filter: 'endedAt != ""', sort: '-endedAt', requestKey: null })
+              .then((r) => r.items[0] ?? null),
+            fasts().getFullList({
+              filter: pb.filter('endedAt != "" && endedAt >= {:since}', {
+                since: lastDays(STRIP_DAYS)[0],
+              }),
+              sort: '-endedAt',
+              requestKey: null,
+            }),
           ]),
         )
-        .then(([serverActive, past]) => {
+        .then(([serverActive, lastEnded, week]) => {
           // A stop still queued offline wins over the server's stale copy.
           const active = serverActive?.id === readPendingStop()?.id ? null : serverActive
-          setState({ active, past })
-          localStorage.setItem(recentCacheKey(), JSON.stringify({ active, past }))
+          const next = { active, lastEnded, week }
+          setState(next)
+          localStorage.setItem(recentCacheKey(), JSON.stringify(next))
         })
-        .catch(() => setState((s) => s ?? { active: null, past: [] })),
+        .catch(() => setState((s) => s ?? { active: null, lastEnded: null, week: [] })),
     [],
   )
 
   useEffect(() => {
     load()
+    // Collapse bursts of changes (e.g. an import) into a single refetch.
+    let timer: ReturnType<typeof setTimeout> | undefined
+    const scheduleLoad = () => {
+      clearTimeout(timer)
+      timer = setTimeout(load, 300)
+    }
     window.addEventListener('online', load)
     // Keep every open device in sync.
-    const unsubscribe = onCollectionChange('fasts', load)
+    const unsubscribe = onCollectionChange('fasts', scheduleLoad)
     return () => {
+      clearTimeout(timer)
       window.removeEventListener('online', load)
       unsubscribe()
     }
@@ -117,15 +113,15 @@ function useRecentFasts() {
 
   /** Paint the new running fast right away; realtime/refetch confirms it. */
   function setActive(active: Fast | null) {
-    setState((s) => ({ active, past: s?.past ?? [] }))
+    setState((s) => ({ lastEnded: s?.lastEnded ?? null, week: s?.week ?? [], active }))
   }
 
   return {
     setActive,
     reload: load,
     fast: state?.active ?? null,
-    lastEnded: state?.past[0] ?? null,
-    past: state?.past ?? [],
+    lastEnded: state?.lastEnded ?? null,
+    week: state?.week ?? [],
     loading: state === null,
   }
 }
@@ -155,7 +151,7 @@ function useNow(enabled: boolean) {
 function Home() {
   const { t, locale } = useI18n()
   const { targetHours, eatingWindowHours } = usePrefs()
-  const { fast, lastEnded, past, loading, setActive, reload } = useRecentFasts()
+  const { fast, lastEnded, week, loading, setActive, reload } = useRecentFasts()
   const now = useNow(Boolean(fast || lastEnded))
   const [dialog, setDialog] = useState<'edit-active' | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
@@ -261,7 +257,7 @@ function Home() {
         <p aria-live="polite" className="sr-only">
           {fast && (progress >= 1 ? t('home.goalReached') : t(`zone.${zone.id}`))}
         </p>
-        <StreakStrip t={t} locale={locale} items={past} />
+        {lastEnded && <StreakStrip t={t} locale={locale} items={week} />}
         {fast && (
           <div className="w-full max-w-sm">
             <ZoneCard t={t} zone={zone} next={next} elapsed={elapsed} />
@@ -349,28 +345,29 @@ const STRIP_CLASS = {
 }
 
 /**
- * Last fasts as a strip of dots, oldest to newest: filled when the goal was
- * met, tinted when it reached MIN_FAST_HOURS, outlined otherwise.
+ * The last STRIP_DAYS calendar days, oldest to newest, by the day fasts end:
+ * filled when a fast met its goal, tinted when it reached MIN_FAST_HOURS,
+ * outlined otherwise (including days without any fast).
  */
 function StreakStrip({ t, locale, items }: { t: Translate; locale: string; items: Fast[] }) {
-  if (items.length === 0) return null
+  const days = recentDays(items, STRIP_DAYS)
   return (
     <Link to="/history" className="flex items-end gap-3" aria-label={t('home.recent')}>
-      {[...items].reverse().map((f) => (
+      {days.map(({ date, level }) => (
         <span
-          key={f.id}
+          key={dayKey(date)}
           className="flex flex-col items-center gap-1"
-          title={capitalize(formatDate(f.endedAt ?? f.startedAt, locale))}
+          title={capitalize(date.toLocaleDateString(locale, { dateStyle: 'full' }))}
         >
           <span
             className={`grid size-9 place-items-center rounded-full text-[0.65rem] font-extrabold tabular-nums ${
-              STRIP_CLASS[fastLevel(f) ?? 'none']
+              STRIP_CLASS[level ?? 'none']
             }`}
           >
-            {new Date(f.endedAt ?? f.startedAt).getDate()}
+            {date.getDate()}
           </span>
           <span className="text-[0.65rem] font-semibold uppercase text-muted-foreground">
-            {new Date(f.endedAt ?? f.startedAt).toLocaleDateString(locale, { weekday: 'narrow' })}
+            {date.toLocaleDateString(locale, { weekday: 'narrow' })}
           </span>
         </span>
       ))}

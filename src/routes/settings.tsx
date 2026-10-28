@@ -4,6 +4,7 @@ import { type ReactNode, useEffect, useRef, useState } from 'react'
 import { AppShell } from '#/components/app-shell'
 import { DataSection } from '#/components/data-section'
 import { GoalPicker } from '#/components/goal-picker'
+import { PlanPicker } from '#/components/plan-picker'
 import { PushToggle } from '#/components/push-toggle'
 import { Select } from '#/components/select'
 import { logout } from '#/lib/auth'
@@ -20,7 +21,7 @@ import {
 } from '#/lib/preferences'
 import { pushRelevant } from '#/lib/push'
 
-const WINDOW_OPTIONS = [0, 4, 6, 8, 10, 12]
+const WINDOW_OPTIONS = [0, 1, 2, 4, 6, 8, 10, 12]
 
 /** Swatch shown in the picker; matches the light-theme accent in styles.css. */
 const ACCENT_SWATCH: Record<Accent, string> = {
@@ -98,6 +99,16 @@ function Settings() {
 
       <div className="grid gap-4 lg:grid-cols-2 lg:items-start lg:gap-6">
         <div className="flex min-w-0 flex-col gap-4 lg:gap-6">
+          <Card title={t('plans.title')} description={t('plans.desc')}>
+            <PlanPicker
+              fastHours={prefs.targetHours}
+              windowHours={prefs.eatingWindowHours}
+              onPick={async (p) => {
+                if (await save({ eatingWindowHours: p.windowHours })) await saveGoal(p.fastHours)
+              }}
+            />
+          </Card>
+
           <Card title={t('settings.goal')} description={t('settings.goal.desc')}>
             <GoalPicker value={prefs.targetHours} onChange={saveGoal} />
           </Card>
@@ -111,6 +122,18 @@ function Settings() {
               }))}
               value={prefs.eatingWindowHours}
               onChange={(h) => save({ eatingWindowHours: h })}
+            />
+          </Card>
+
+          <Card title={t('settings.body')} description={t('settings.body.desc')}>
+            <Select
+              label={t('settings.body')}
+              options={[
+                { value: 'on' as const, label: t('settings.body.on') },
+                { value: 'off' as const, label: t('settings.body.off') },
+              ]}
+              value={prefs.bodyTracking === 'on' ? 'on' : 'off'}
+              onChange={(v) => save({ bodyTracking: v })}
             />
           </Card>
 
