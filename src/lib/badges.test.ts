@@ -18,7 +18,17 @@ describe('badgeProgress', () => {
     const unlocked = badgeProgress(stats)
       .filter((b) => b.unlocked)
       .map((b) => b.id)
-    expect(unlocked).toEqual(['first', 'completed10', 'long24', 'long36', 'streak3', 'hours100'])
+    expect(unlocked).toEqual([
+      'first',
+      'completed10',
+      'long16',
+      'long20',
+      'long24',
+      'long36',
+      'streak3',
+      'hours50',
+      'hours100',
+    ])
   })
 
   it('unlocks long streak badges from the best streak', () => {
@@ -26,6 +36,6 @@ describe('badgeProgress', () => {
     const streaks = badgeProgress(stats)
       .filter((b) => b.kind === 'streak' && b.unlocked)
       .map((b) => b.id)
-    expect(streaks).toEqual(['streak3', 'streak7', 'streak30', 'streak60', 'streak100'])
+    expect(streaks).toEqual(['streak3', 'streak7', 'streak14', 'streak30', 'streak60', 'streak100'])
   })
 })

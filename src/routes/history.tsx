@@ -121,6 +121,10 @@ function History() {
       ) : (
         <div className="grid gap-6 lg:grid-cols-2 lg:items-start">
           <div className="flex flex-col gap-6">
+            <section className="flex flex-col gap-3">
+              <h2 className="font-display text-xl font-extrabold">{t('history.lastFast')}</h2>
+              <FastRow fast={items[0]} onClick={() => setEditing(items[0])} />
+            </section>
             <dl className="grid grid-cols-3 gap-2 text-center">
               <Stat label={t('history.streak')} value={t('history.days', { n: stats.streak })} />
               <Stat
@@ -153,40 +157,9 @@ function History() {
             <h2 className="font-display text-xl font-extrabold">{t('history.fasts')}</h2>
             <ul className="flex flex-col gap-2">
               {items.slice(0, visible).map((f) => {
-                const level = fastLevel(f)
                 return (
                   <li key={f.id}>
-                    <button
-                      type="button"
-                      onClick={() => setEditing(f)}
-                      className="flex w-full items-center gap-4 rounded-2xl border border-input px-4 py-3 text-left transition-colors hover:bg-muted/40"
-                    >
-                      <span
-                        className={`size-3 shrink-0 rounded-full ${DOT_CLASS[level ?? 'none']}`}
-                      >
-                        <span className="sr-only">
-                          {level === 'goal'
-                            ? t('history.goalMet')
-                            : level === 'min'
-                              ? t('calendar.legendMin', { h: MIN_FAST_HOURS })
-                              : t('history.goalMissed')}
-                        </span>
-                      </span>
-                      <span className="flex min-w-0 flex-1 flex-col">
-                        <span className="text-sm font-semibold text-muted-foreground">
-                          {capitalize(formatDate(f.startedAt, locale))}
-                        </span>
-                        {f.note && <span className="truncate text-sm">{f.note}</span>}
-                      </span>
-                      <span className="flex flex-col items-end">
-                        <span className="font-display text-xl font-extrabold tabular-nums">
-                          {formatHours(durationMs(f))}
-                        </span>
-                        <span className="text-xs font-semibold text-muted-foreground">
-                          {t('history.ofTarget', { h: f.targetHours })}
-                        </span>
-                      </span>
-                    </button>
+                    <FastRow fast={f} onClick={() => setEditing(f)} />
                   </li>
                 )
               })}
@@ -250,4 +223,40 @@ function Stat({ label, value }: { label: string; value: string }) {
 
 function formatTileHours(ms: number) {
   return `${(ms / 3_600_000).toFixed(1).replace('.0', '')}h`
+}
+
+function FastRow({ fast, onClick }: { fast: Fast; onClick: () => void }) {
+  const { t, locale } = useI18n()
+  const level = fastLevel(fast)
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="flex w-full items-center gap-4 rounded-2xl border border-input px-4 py-3 text-left transition-colors hover:bg-muted/40"
+    >
+      <span className={`size-3 shrink-0 rounded-full ${DOT_CLASS[level ?? 'none']}`}>
+        <span className="sr-only">
+          {level === 'goal'
+            ? t('history.goalMet')
+            : level === 'min'
+              ? t('calendar.legendMin', { h: MIN_FAST_HOURS })
+              : t('history.goalMissed')}
+        </span>
+      </span>
+      <span className="flex min-w-0 flex-1 flex-col">
+        <span className="text-sm font-semibold text-muted-foreground">
+          {capitalize(formatDate(fast.startedAt, locale))}
+        </span>
+        {fast.note && <span className="truncate text-sm">{fast.note}</span>}
+      </span>
+      <span className="flex flex-col items-end">
+        <span className="font-display text-xl font-extrabold tabular-nums">
+          {formatHours(durationMs(fast))}
+        </span>
+        <span className="text-xs font-semibold text-muted-foreground">
+          {t('history.ofTarget', { h: fast.targetHours })}
+        </span>
+      </span>
+    </button>
+  )
 }
