@@ -11,5 +11,5 @@ export const env = {
   vapidPublicKey: required('VAPID_PUBLIC_KEY'),
   vapidPrivateKey: required('VAPID_PRIVATE_KEY'),
   vapidSubject: required('VAPID_SUBJECT'),
-  pollIntervalMs: Number(process.env.POLL_INTERVAL_SECONDS ?? 30) * 1000,
+  pollIntervalMs: Number(process.env.POLL_INTERVAL_SECONDS ?? 120) * 1000,
 }

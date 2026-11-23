@@ -5,6 +5,7 @@ import { useEffect } from 'react'
 
 import { refreshSession } from '#/lib/auth'
 import { ACCENTS, STORAGE_KEY } from '#/lib/preferences'
+import { syncPushSubscription } from '#/lib/push'
 import appCss from '../styles.css?url'
 
 export const Route = createRootRoute({
@@ -45,7 +46,10 @@ const THEME_BOOT_SCRIPT = `try{var p=JSON.parse(localStorage.getItem(${JSON.stri
 function useServiceWorker() {
   useEffect(() => {
     if (!('serviceWorker' in navigator)) return
-    navigator.serviceWorker.register('/sw.js')
+    navigator.serviceWorker
+      .register('/sw.js')
+      .then(() => syncPushSubscription())
+      .catch(() => {})
   }, [])
 }
 

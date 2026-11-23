@@ -85,6 +85,19 @@ function saveSubscription(sub: PushSubscription) {
   })
 }
 
+/**
+ * Re-stores this device's subscription when the server lost it (rotated by
+ * the browser, or pruned), so a switched-on toggle really receives pushes.
+ */
+export async function syncPushSubscription() {
+  if (!pushSupported() || !pb.authStore.isValid || Notification.permission !== 'granted') return
+  const reg = await navigator.serviceWorker.getRegistration()
+  const sub = await reg?.pushManager.getSubscription()
+  if (!sub || (await findRecord(sub.endpoint))) return
+  // Fails if the endpoint belongs to another account; the toggle fixes that.
+  await saveSubscription(sub).catch(() => {})
+}
+
 export async function disablePush() {
   const sub = await getPushSubscription()
   if (!sub) return

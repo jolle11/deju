@@ -59,6 +59,19 @@ self.addEventListener('push', (event) => {
   )
 })
 
+// The browser can rotate the subscription on its own. Re-subscribe with the
+// same key so pushes keep arriving; the app stores the new endpoint the next
+// time it opens (syncPushSubscription), and the worker prunes the old one.
+self.addEventListener('pushsubscriptionchange', (event) => {
+  const options = event.oldSubscription?.options
+  if (!options?.applicationServerKey) return
+  event.waitUntil(
+    self.registration.pushManager
+      .subscribe({ userVisibleOnly: true, applicationServerKey: options.applicationServerKey })
+      .catch(() => {}),
+  )
+})
+
 self.addEventListener('notificationclick', (event) => {
   event.notification.close()
   const url = event.notification.data?.url ?? '/'
