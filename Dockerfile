@@ -13,4 +13,5 @@ FROM node:24-alpine
 WORKDIR /app
 ENV NODE_ENV=production
 COPY --from=build /app/.output ./.output
+USER node
 CMD ["node", ".output/server/index.mjs"]

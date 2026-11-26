@@ -1,12 +1,16 @@
-FROM alpine:3.22
+FROM alpine:3.22 AS download
 
 ARG PB_VERSION=0.40.5
 
-RUN apk add --no-cache unzip ca-certificates
-
+RUN apk add --no-cache unzip
 ADD https://github.com/pocketbase/pocketbase/releases/download/v${PB_VERSION}/pocketbase_${PB_VERSION}_linux_amd64.zip /tmp/pb.zip
-RUN unzip /tmp/pb.zip -d /pb/ && rm /tmp/pb.zip
+RUN unzip /tmp/pb.zip pocketbase -d /pb/
 
+FROM alpine:3.22
+
+RUN apk add --no-cache ca-certificates
+
+COPY --from=download /pb/pocketbase /pb/pocketbase
 COPY ./pb_migrations /pb/pb_migrations
 COPY ./pb_hooks /pb/pb_hooks
 

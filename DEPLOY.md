@@ -8,11 +8,11 @@ Un proyecto de Railway con tres servicios desde este repo:
 | `pocketbase` | `/pocketbase` | Dockerfile. **Volumen montado en `/pb/pb_data`**. Dominio público (el navegador habla con él). Puerto 8090. |
 | `notif-worker` | `/worker` | Dockerfile. Sin dominio. |
 
-> **PocketBase debe tener exactamente 1 réplica** (guarda los clientes realtime en memoria y usa SQLite). `pocketbase/railway.json` ya fija `numReplicas: 1`.
+> **PocketBase debe tener exactamente 1 réplica** (guarda los clientes realtime en memoria y usa SQLite). `.railway/railway.ts` ya fija 1 réplica.
 >
 > La migración `1760200000_trusted_proxy.js` configura *Trusted proxy* (`X-Real-IP`, `X-Forwarded-For`). Sin ella PocketBase ve la IP del proxy de Railway, que cambia en cada petición, y el realtime falla con `400 Invalid realtime client`. No la quites en Settings → Application.
 
-Los "Watch paths" de cada servicio están en su `railway.json` (`watchPatterns`), así un push solo redeploya el servicio que cambia.
+La configuración de los servicios (watch paths, healthchecks, política de reinicio, límites de CPU/RAM, sleep) vive en `.railway/railway.ts` (Infrastructure as Code). Previsualiza con `railway config plan` y aplica con `railway config apply`. Las variables no las gestiona IaC (`variables: { managed: false }`).
 
 ## Variables
 
