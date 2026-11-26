@@ -18,7 +18,7 @@ export default defineRailway(() => {
     build: { buildEnvironment: "V3", builder: "DOCKERFILE", dockerfilePath: "Dockerfile", watchPatterns: ["/pocketbase/**"] },
     healthcheck: "/api/health",
     replicas: { [REGION]: 1 },
-    deploy: { restartPolicyType: "ON_FAILURE", restartPolicyMaxRetries: 10, sleepApplication: false, limitOverride: limits(1, 1024) },
+    deploy: { limitOverride: limits(1, 1024) },
     volumeMounts: { "/pb/pb_data": pocketbaseVolume },
   });
 
@@ -27,7 +27,7 @@ export default defineRailway(() => {
     source: github("jolle11/deju", { branch: "main", checkSuites: false, rootDirectory: "/worker" }),
     build: { buildEnvironment: "V3", builder: "DOCKERFILE", dockerfilePath: "Dockerfile", watchPatterns: ["/worker/**"] },
     replicas: { [REGION]: 1 },
-    deploy: { restartPolicyType: "ALWAYS", sleepApplication: false, limitOverride: limits(0.5, 256) },
+    deploy: { restartPolicyType: "ALWAYS", limitOverride: limits(0.5, 256) },
   });
 
   // Stateless SSR frontend: can sleep when idle.
@@ -53,7 +53,7 @@ export default defineRailway(() => {
     },
     healthcheck: "/",
     replicas: { [REGION]: 1 },
-    deploy: { restartPolicyType: "ON_FAILURE", restartPolicyMaxRetries: 10, sleepApplication: true, limitOverride: limits(1, 512) },
+    deploy: { sleepApplication: true, limitOverride: limits(1, 512) },
   });
 
   return project("deju", {
